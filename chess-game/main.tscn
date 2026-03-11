@@ -1,0 +1,14 @@
+[gd_scene format=3 uid="uid://l41k4m2kd4oq"]
+
+[ext_resource type="Script" uid="uid://bogw5eycnqb0q" path="res://main.gd" id="1_ig7tw"]
+
+[sub_resource type="TileSet" id="TileSet_0xm2m"]
+tile_shape = 1
+tile_layout = 5
+tile_size = Vector2i(128, 64)
+
+[node name="Main" type="Node2D" unique_id=572728295]
+script = ExtResource("1_ig7tw")
+
+[node name="Grid" type="TileMapLayer" parent="." unique_id=814356611]
+tile_set = SubResource("TileSet_0xm2m")
