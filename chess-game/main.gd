@@ -2,6 +2,9 @@ extends Node2D
 
 @onready var renderer = $Renderer
 
+func _ready():
+	print("Main prêt !")
+
 func _input(event):
 	if event is InputEventMouseButton and event.pressed:
 		var cell = renderer.screen_to_grid(event.position)
