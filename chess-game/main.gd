@@ -1,11 +1,9 @@
 extends Node2D
 
-@onready var grid = $Grid  # Référence au nœud TileMapLayer
+@onready var renderer = $Renderer
 
-func _ready():
-	generate_grid()
-
-func generate_grid():
-	for x in range(8):
-		for y in range(8):
-			grid.set_cell(Vector2i(x, y), 0, Vector2i(0, 0))
+func _input(event):
+	if event is InputEventMouseButton and event.pressed:
+		var cell = renderer.screen_to_grid(event.position)
+		if cell.x >= 0 and cell.x < 8 and cell.y >= 0 and cell.y < 8:
+			print("Case cliquée : (", cell.x, ", ", cell.y, ")")

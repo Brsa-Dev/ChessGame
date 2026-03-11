@@ -1,14 +1,14 @@
 [gd_scene format=3 uid="uid://l41k4m2kd4oq"]
 
 [ext_resource type="Script" uid="uid://bogw5eycnqb0q" path="res://main.gd" id="1_ig7tw"]
-
-[sub_resource type="TileSet" id="TileSet_0xm2m"]
-tile_shape = 1
-tile_layout = 5
-tile_size = Vector2i(128, 64)
+[ext_resource type="Script" uid="uid://cx5ap1rwg6fkk" path="res://board.gd" id="2_0xm2m"]
+[ext_resource type="Script" uid="uid://d1c4gj8rey8gb" path="res://renderer.gd" id="3_h2yge"]
 
 [node name="Main" type="Node2D" unique_id=572728295]
 script = ExtResource("1_ig7tw")
 
-[node name="Grid" type="TileMapLayer" parent="." unique_id=814356611]
-tile_set = SubResource("TileSet_0xm2m")
+[node name="Board" type="Node" parent="." unique_id=909297872]
+script = ExtResource("2_0xm2m")
+
+[node name="Renderer" type="Node2D" parent="." unique_id=367535539]
+script = ExtResource("3_h2yge")
