@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://bogw5eycnqb0q" path="res://main.gd" id="1_ig7tw"]
 [ext_resource type="Script" uid="uid://cx5ap1rwg6fkk" path="res://board.gd" id="2_0xm2m"]
 [ext_resource type="Script" uid="uid://d1c4gj8rey8gb" path="res://renderer.gd" id="3_h2yge"]
+[ext_resource type="Script" uid="uid://c7l7r2i3xys5f" path="res://joueur.gd" id="4_1bvp3"]
 
 [node name="Main" type="Node2D" unique_id=572728295]
 script = ExtResource("1_ig7tw")
@@ -12,3 +13,6 @@ script = ExtResource("2_0xm2m")
 
 [node name="Renderer" type="Node2D" parent="." unique_id=367535539]
 script = ExtResource("3_h2yge")
+
+[node name="Joueur" type="Node" parent="." unique_id=754179848]
+script = ExtResource("4_1bvp3")
