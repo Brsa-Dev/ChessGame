@@ -4,6 +4,7 @@
 [ext_resource type="Script" uid="uid://cx5ap1rwg6fkk" path="res://board.gd" id="2_0xm2m"]
 [ext_resource type="Script" uid="uid://d1c4gj8rey8gb" path="res://renderer.gd" id="3_h2yge"]
 [ext_resource type="Script" uid="uid://c7l7r2i3xys5f" path="res://joueur.gd" id="4_1bvp3"]
+[ext_resource type="Script" uid="uid://dwdhc37i2tort" path="res://tour_manager.gd" id="5_lquwl"]
 
 [node name="Main" type="Node2D" unique_id=572728295]
 script = ExtResource("1_ig7tw")
@@ -16,3 +17,15 @@ script = ExtResource("3_h2yge")
 
 [node name="Joueur" type="Node" parent="." unique_id=754179848]
 script = ExtResource("4_1bvp3")
+
+[node name="Joueur2" type="Node" parent="." unique_id=1933811520]
+script = ExtResource("4_1bvp3")
+
+[node name="TourManager" type="Node" parent="." unique_id=313856146]
+script = ExtResource("5_lquwl")
+
+[node name="Timer" type="Timer" parent="TourManager" unique_id=1992702120]
+wait_time = 150.0
+one_shot = true
+
+[connection signal="timeout" from="TourManager/Timer" to="TourManager" method="_on_timer_timeout"]

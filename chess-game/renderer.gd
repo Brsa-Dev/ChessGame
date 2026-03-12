@@ -5,7 +5,8 @@ const TILE_H = 64
 const OFFSET = Vector2(600, 100)
 
 var board: Node = null
-var joueur: Node = null
+var joueurs: Array = []          # Liste des deux joueurs
+var joueur_actif: Node = null    # Le joueur dont c'est le tour
 var joueur_selectionne: bool = false
 
 const COULEURS = {
@@ -18,8 +19,14 @@ const COULEURS = {
 	6: Color(0.7,  0.6,  0.1 ),  # TOUR    — doré
 }
 
+# Couleur de chaque joueur — index correspond à l'ordre dans la liste
+const COULEURS_JOUEURS = [
+	Color.YELLOW,  # Joueur 1 — jaune
+	Color.BLUE,    # Joueur 2 — bleu
+]
+
 # Couleur de surbrillance des cases accessibles
-const COULEUR_ACCESSIBLE = Color(1.0, 1.0, 0.3, 0.6)  # Jaune transparent
+const COULEUR_ACCESSIBLE = Color(1.0, 1.0, 0.3, 0.6)
 
 func _ready():
 	print("Renderer prêt !")
@@ -32,26 +39,30 @@ func _draw():
 			var couleur = COULEURS.get(type, Color.WHITE)
 			dessiner_case(x, y, couleur)
 	
-	# 2. Si le joueur est sélectionné, on surligne les cases accessibles
-	if joueur != null and joueur_selectionne:
+	# 2. On vérifie que la liste des joueurs n'est pas vide avant de continuer
+	if joueurs.is_empty():
+		return
+	
+	# 3. Si le joueur actif est sélectionné, on surligne les cases accessibles
+	if joueur_actif != null and joueur_selectionne:
 		_dessiner_cases_accessibles()
 	
-	# 3. On dessine le joueur par dessus tout
-	if joueur != null and joueur.est_place:
-		dessiner_joueur(joueur.grid_x, joueur.grid_y)
-
-# Calcule et dessine toutes les cases accessibles depuis la position du joueur
+	# 4. On dessine tous les joueurs placés par dessus le plateau
+	for i in range(joueurs.size()):
+		var joueur = joueurs[i]
+		# On vérifie que le joueur existe et est bien placé avant de le dessiner
+		if joueur != null and joueur.est_place:
+			var couleur = COULEURS_JOUEURS[i]
+			var rayon = 22 if joueur == joueur_actif else 16
+			dessiner_joueur(joueur.grid_x, joueur.grid_y, couleur, rayon)
 func _dessiner_cases_accessibles():
 	for x in range(8):
 		for y in range(8):
-			# On ignore la case du joueur lui-même
-			if x == joueur.grid_x and y == joueur.grid_y:
+			if x == joueur_actif.grid_x and y == joueur_actif.grid_y:
 				continue
-			# On vérifie si la case est accessible avec les PM restants
-			if joueur.peut_se_deplacer_vers(x, y):
+			if joueur_actif.peut_se_deplacer_vers(x, y):
 				_dessiner_surbrillance(x, y)
 
-# Dessine un losange semi-transparent par dessus une case
 func _dessiner_surbrillance(x: int, y: int):
 	var cx = OFFSET.x + (x - y) * (TILE_W / 2)
 	var cy = OFFSET.y + (x + y) * (TILE_H / 2)
@@ -76,10 +87,11 @@ func dessiner_case(x: int, y: int, couleur: Color):
 	draw_polyline(points, Color.BLACK, 1.0)
 	draw_line(points[3], points[0], Color.BLACK, 1.0)
 
-func dessiner_joueur(x: int, y: int):
+# Le rayon permet de distinguer le joueur actif (plus grand)
+func dessiner_joueur(x: int, y: int, couleur: Color, rayon: int):
 	var cx = OFFSET.x + (x - y) * (TILE_W / 2)
 	var cy = OFFSET.y + (x + y) * (TILE_H / 2)
-	draw_circle(Vector2(cx, cy), 20, Color.YELLOW)
+	draw_circle(Vector2(cx, cy), rayon, couleur)
 
 func screen_to_grid(pos: Vector2) -> Vector2i:
 	for x in range(8):
