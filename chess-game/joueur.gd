@@ -31,6 +31,13 @@ var attaque_cout_pm: int = 1        # PM consommés par attaque
 var a_attaque_ce_tour: bool = false # True si le joueur a déjà attaqué ce tour
 
 # -----------------------------------------------
+# Boutique & dépences de Golds
+# -----------------------------------------------
+
+var inventaire: Array = []              # Liste des items achetés
+var achats_par_item: Dictionary = {}    # { "elixir_gold": 1, ... }
+var resistance_degats: float = 0.0     # Cumulable (ex: 0.10 = 10%)
+# -----------------------------------------------
 # Place le joueur sur une case de la grille
 # -----------------------------------------------
 func placer(x: int, y: int):
@@ -92,7 +99,8 @@ func attaquer(cible: Node) -> int:
 # Reçoit des dégâts
 # -----------------------------------------------
 func recevoir_degats(degats: int):
-	hp_actuels -= degats
+	var degats_reduits = int(degats * (1.0 - resistance_degats))
+	hp_actuels -= degats_reduits
 	hp_actuels = max(0, hp_actuels)
 	print("HP restants : ", hp_actuels, " / ", hp_max)
 	if hp_actuels <= 0:

@@ -24,6 +24,9 @@ const DUREE_TOUR = 150.0
 signal tour_change(joueur_actif)
 signal tour_global_termine(numero_tour)
 
+# émis quand la phase boutique doit s'ouvrir
+signal phase_boutique(numero_tour)
+
 # -----------------------------------------------
 # Appelée par main.gd au démarrage
 # Reçoit la liste des joueurs et tire au sort le premier
@@ -72,6 +75,8 @@ func passer_au_tour_suivant():
 # -----------------------------------------------
 func _fin_tour_global():
 	emit_signal("tour_global_termine", tour_global)
+	# On déclenche la phase boutique avant de passer au tour suivant
+	emit_signal("phase_boutique", tour_global)
 	tour_global += 1
 	print("=== Tour global ", tour_global, " commence ===")
 
