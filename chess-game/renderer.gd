@@ -5,8 +5,8 @@ const TILE_H = 64
 const OFFSET = Vector2(600, 100)
 
 var board: Node = null
-var joueurs: Array = []          # Liste des deux joueurs
-var joueur_actif: Node = null    # Le joueur dont c'est le tour
+var joueurs: Array = []
+var joueur_actif: Node = null
 var joueur_selectionne: bool = false
 
 const COULEURS = {
@@ -19,14 +19,15 @@ const COULEURS = {
 	6: Color(0.7,  0.6,  0.1 ),  # TOUR    — doré
 }
 
-# Couleur de chaque joueur — index correspond à l'ordre dans la liste
 const COULEURS_JOUEURS = [
 	Color.YELLOW,  # Joueur 1 — jaune
 	Color.BLUE,    # Joueur 2 — bleu
 ]
 
-# Couleur de surbrillance des cases accessibles
-const COULEUR_ACCESSIBLE = Color(1.0, 1.0, 0.3, 0.6)
+# Surbrillance déplacement — jaune transparent
+const COULEUR_ACCESSIBLE = Color(1.0, 1.0, 0.3, 0.5)
+# Surbrillance attaque — rouge transparent
+const COULEUR_ATTAQUE = Color(1.0, 0.2, 0.2, 0.5)
 
 func _ready():
 	print("Renderer prêt !")
@@ -38,44 +39,54 @@ func _draw():
 			var type = board.get_case(x, y) if board != null else 0
 			var couleur = COULEURS.get(type, Color.WHITE)
 			dessiner_case(x, y, couleur)
-	
-	# 2. On vérifie que la liste des joueurs n'est pas vide avant de continuer
+
 	if joueurs.is_empty():
 		return
-	
-	# 3. Si le joueur actif est sélectionné, on surligne les cases accessibles
+
+	# 2. Si le joueur est sélectionné, on affiche les deux surbrillances
 	if joueur_actif != null and joueur_selectionne:
 		_dessiner_cases_accessibles()
-	
-	# 4. On dessine tous les joueurs placés par dessus le plateau
+		_dessiner_cases_attaquables()
+
+	# 3. On dessine tous les joueurs placés
 	for i in range(joueurs.size()):
 		var joueur = joueurs[i]
-		# On vérifie que le joueur existe et est bien placé avant de le dessiner
 		if joueur != null and joueur.est_place:
 			var couleur = COULEURS_JOUEURS[i]
 			var rayon = 22 if joueur == joueur_actif else 16
 			dessiner_joueur(joueur.grid_x, joueur.grid_y, couleur, rayon)
 
+# Cases de déplacement — jaune, cases libres uniquement
 func _dessiner_cases_accessibles():
 	for x in range(8):
 		for y in range(8):
-			# On ignore la case du joueur actif lui-même
 			if x == joueur_actif.grid_x and y == joueur_actif.grid_y:
 				continue
 			# On ignore les cases occupées par un autre joueur
-			var case_occupee = false
+			var occupee = false
 			for joueur in joueurs:
 				if joueur.est_place and joueur != joueur_actif:
 					if joueur.grid_x == x and joueur.grid_y == y:
-						case_occupee = true
+						occupee = true
 						break
-			if case_occupee:
+			if occupee:
 				continue
-			# On surligne uniquement les cases accessibles et libres
 			if joueur_actif.peut_se_deplacer_vers(x, y):
-				_dessiner_surbrillance(x, y)
+				_dessiner_surbrillance(x, y, COULEUR_ACCESSIBLE)
 
-func _dessiner_surbrillance(x: int, y: int):
+# Cases d'attaque — rouge, uniquement sur les ennemis à portée
+func _dessiner_cases_attaquables():
+	# Si le joueur a déjà attaqué ce tour, on n'affiche rien
+	if joueur_actif.a_attaque_ce_tour:
+		return
+	for joueur in joueurs:
+		# On ne surligne que les ennemis (pas le joueur actif lui-même)
+		if joueur == joueur_actif:
+			continue
+		if joueur.est_place and joueur_actif.peut_attaquer(joueur.grid_x, joueur.grid_y):
+			_dessiner_surbrillance(joueur.grid_x, joueur.grid_y, COULEUR_ATTAQUE)
+
+func _dessiner_surbrillance(x: int, y: int, couleur: Color):
 	var cx = OFFSET.x + (x - y) * (TILE_W / 2)
 	var cy = OFFSET.y + (x + y) * (TILE_H / 2)
 	var points = PackedVector2Array([
@@ -84,7 +95,7 @@ func _dessiner_surbrillance(x: int, y: int):
 		Vector2(cx,               cy + TILE_H / 2),
 		Vector2(cx - TILE_W / 2, cy),
 	])
-	draw_colored_polygon(points, COULEUR_ACCESSIBLE)
+	draw_colored_polygon(points, couleur)
 
 func dessiner_case(x: int, y: int, couleur: Color):
 	var cx = OFFSET.x + (x - y) * (TILE_W / 2)
@@ -99,7 +110,6 @@ func dessiner_case(x: int, y: int, couleur: Color):
 	draw_polyline(points, Color.BLACK, 1.0)
 	draw_line(points[3], points[0], Color.BLACK, 1.0)
 
-# Le rayon permet de distinguer le joueur actif (plus grand)
 func dessiner_joueur(x: int, y: int, couleur: Color, rayon: int):
 	var cx = OFFSET.x + (x - y) * (TILE_W / 2)
 	var cy = OFFSET.y + (x + y) * (TILE_H / 2)
