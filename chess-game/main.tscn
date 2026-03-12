@@ -3,7 +3,8 @@
 [ext_resource type="Script" uid="uid://bogw5eycnqb0q" path="res://main.gd" id="1_ig7tw"]
 [ext_resource type="Script" uid="uid://cx5ap1rwg6fkk" path="res://board.gd" id="2_0xm2m"]
 [ext_resource type="Script" uid="uid://d1c4gj8rey8gb" path="res://renderer.gd" id="3_h2yge"]
-[ext_resource type="Script" uid="uid://c7l7r2i3xys5f" path="res://joueur.gd" id="4_1bvp3"]
+[ext_resource type="Script" uid="uid://c1mg3hyujhvxw" path="res://Classe/guerrier.gd" id="4_5vw27"]
+[ext_resource type="Script" uid="uid://dd545mykmfl8k" path="res://Classe/mage.gd" id="5_kek77"]
 [ext_resource type="Script" uid="uid://dwdhc37i2tort" path="res://tour_manager.gd" id="5_lquwl"]
 [ext_resource type="Script" uid="uid://gmarcgm6a54i" path="res://shop_manager.gd" id="6_272bh"]
 [ext_resource type="PackedScene" uid="uid://mbe0rw1qqi34" path="res://shop_ui.tscn" id="7_5vw27"]
@@ -18,10 +19,10 @@ script = ExtResource("2_0xm2m")
 script = ExtResource("3_h2yge")
 
 [node name="Joueur1" type="Node" parent="." unique_id=754179848]
-script = ExtResource("4_1bvp3")
+script = ExtResource("4_5vw27")
 
 [node name="Joueur2" type="Node" parent="." unique_id=1933811520]
-script = ExtResource("4_1bvp3")
+script = ExtResource("5_kek77")
 
 [node name="TourManager" type="Node" parent="." unique_id=313856146]
 script = ExtResource("5_lquwl")
