@@ -1,8 +1,13 @@
 extends Node2D
 
+@onready var board = $Board
 @onready var renderer = $Renderer
 
 func _ready():
+	# On assigne d'abord la référence au board...
+	renderer.board = board
+	# ...puis on déclenche le dessin maintenant que board est connu
+	renderer.queue_redraw()
 	print("Main prêt !")
 
 func _input(event):
