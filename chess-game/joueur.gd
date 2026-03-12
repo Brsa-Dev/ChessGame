@@ -3,6 +3,10 @@ extends Node
 # -----------------------------------------------
 # JOUEUR — Classe de base
 # -----------------------------------------------
+signal mort
+
+# Indique si le joueur est éliminé
+var est_mort: bool = false
 
 var grid_x: int = 0
 var grid_y: int = 0
@@ -91,6 +95,10 @@ func recevoir_degats(degats: int):
 	hp_actuels -= degats
 	hp_actuels = max(0, hp_actuels)
 	print("HP restants : ", hp_actuels, " / ", hp_max)
+	if hp_actuels <= 0:
+		est_mort = true
+		print("Joueur éliminé !")
+		emit_signal("mort")
 
 # -----------------------------------------------
 # Méthode centralisée pour gagner du Gold

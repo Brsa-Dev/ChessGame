@@ -15,6 +15,11 @@ func _ready():
 	tour_manager.initialiser([joueur1, joueur2])
 	renderer.joueur_actif = tour_manager.get_joueur_actif()
 	bouton_fin_tour.pressed.connect(fin_de_tour)
+	
+	# On écoute le signal mort de chaque joueur
+	joueur1.mort.connect(_on_joueur_mort.bind(joueur1))
+	joueur2.mort.connect(_on_joueur_mort.bind(joueur2))
+	
 	renderer.queue_redraw()
 	print("Main prêt !")
 
@@ -97,6 +102,13 @@ func _get_joueur_en(x: int, y: int) -> Node:
 		if joueur.est_place and joueur.grid_x == x and joueur.grid_y == y:
 			return joueur
 	return null
+
+# Appelée quand un joueur tombe à 0 HP
+func _on_joueur_mort(joueur: Node):
+	print("Joueur éliminé !")
+	# On libère juste sa case — on ne touche pas au tableau joueurs
+	board.liberer_case(joueur.grid_x, joueur.grid_y)
+	renderer.queue_redraw()
 
 # Appelée par le bouton "Fin de tour"
 func fin_de_tour():
