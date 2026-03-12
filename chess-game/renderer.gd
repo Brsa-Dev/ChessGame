@@ -24,6 +24,12 @@ const COULEURS_JOUEURS = [
 	Color.BLUE,    # Joueur 2 — bleu
 ]
 
+# En haut avec les autres constantes de couleur
+const COULEUR_SORT = Color(0.7, 0.2, 1.0, 0.5)  # Violet transparent
+
+# Ajoute cette variable
+var sort_selectionne: int = -1  # Index du sort actif (-1 = aucun)
+
 # Surbrillance déplacement — jaune transparent
 const COULEUR_ACCESSIBLE = Color(1.0, 1.0, 0.3, 0.5)
 # Surbrillance attaque — rouge transparent
@@ -47,6 +53,9 @@ func _draw():
 	if joueur_actif != null and joueur_selectionne:
 		_dessiner_cases_accessibles()
 		_dessiner_cases_attaquables()
+		# Surbrillance du sort — vérifie que l'index est valide
+		if sort_selectionne >= 0 and sort_selectionne < joueur_actif.sorts.size():
+			_dessiner_cases_sort()
 
 	# 3. On dessine tous les joueurs placés
 	for i in range(joueurs.size()):
@@ -62,7 +71,12 @@ func _dessiner_cases_accessibles():
 		for y in range(8):
 			if x == joueur_actif.grid_x and y == joueur_actif.grid_y:
 				continue
-			# On ignore les cases occupées par un autre joueur
+			
+			# On n'affiche pas de surbrillance sur VIDE et MUR
+			var type_case = board.get_case(x, y)
+			if type_case == board.CaseType.VIDE or type_case == board.CaseType.MUR:
+				continue
+			
 			var occupee = false
 			for joueur in joueurs:
 				if joueur.est_place and joueur != joueur_actif:
@@ -76,16 +90,27 @@ func _dessiner_cases_accessibles():
 
 # Cases d'attaque — rouge, uniquement sur les ennemis à portée
 func _dessiner_cases_attaquables():
-	# Si le joueur a déjà attaqué ce tour, on n'affiche rien
-	if joueur_actif.a_attaque_ce_tour:
-		return
 	for joueur in joueurs:
-		# On ne surligne que les ennemis (pas le joueur actif lui-même)
 		if joueur == joueur_actif:
 			continue
-		if joueur.est_place and joueur_actif.peut_attaquer(joueur.grid_x, joueur.grid_y):
-			_dessiner_surbrillance(joueur.grid_x, joueur.grid_y, COULEUR_ATTAQUE)
+		if joueur.est_place and not joueur.est_mort:
+			# peut_attaquer() gère tous les cas :
+			# - attaque normale
+			# - 2ème attaque du Fripon
+			if joueur_actif.peut_attaquer(joueur.grid_x, joueur.grid_y):
+				_dessiner_surbrillance(joueur.grid_x, joueur.grid_y, COULEUR_ATTAQUE)
 
+func _dessiner_cases_sort():
+	# On récupère le sort sélectionné
+	var sort = joueur_actif.sorts[sort_selectionne]
+	for x in range(8):
+		for y in range(8):
+			if x == joueur_actif.grid_x and y == joueur_actif.grid_y:
+				continue
+			var distance = abs(x - joueur_actif.grid_x) + abs(y - joueur_actif.grid_y)
+			if distance <= sort.portee:
+				_dessiner_surbrillance(x, y, COULEUR_SORT)
+				
 func _dessiner_surbrillance(x: int, y: int, couleur: Color):
 	var cx = OFFSET.x + (x - y) * (TILE_W / 2)
 	var cy = OFFSET.y + (x + y) * (TILE_H / 2)

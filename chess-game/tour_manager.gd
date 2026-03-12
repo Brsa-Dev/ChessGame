@@ -4,6 +4,7 @@ extends Node
 # TOUR MANAGER — Gestion des tours de jeu
 # -----------------------------------------------
 
+var joueurs_ayant_joue: int = 0
 # Liste des joueurs dans l'ordre de jeu
 var joueurs: Array = []
 
@@ -23,6 +24,9 @@ const DUREE_TOUR = 150.0
 # Signaux — main.gd peut s'y connecter plus tard
 signal tour_change(joueur_actif)
 signal tour_global_termine(numero_tour)
+
+# émis quand la phase boutique doit s'ouvrir
+signal phase_boutique(numero_tour)
 
 # -----------------------------------------------
 # Appelée par main.gd au démarrage
@@ -51,12 +55,16 @@ func get_joueur_actif() -> Node:
 # Appelée par main.gd (bouton fin de tour ou timer)
 # -----------------------------------------------
 func passer_au_tour_suivant():
-	# Index suivant en bouclant sur la liste
-	index_joueur_actif = (index_joueur_actif + 1) % joueurs.size()
+	# On incrémente le compteur de joueurs ayant joué
+	joueurs_ayant_joue += 1
 	
-	# Si on revient au joueur 0 → tour global terminé
-	if index_joueur_actif == 0:
+	# Si tous les joueurs ont joué → tour global terminé
+	if joueurs_ayant_joue >= joueurs.size():
+		joueurs_ayant_joue = 0  # On remet le compteur à zéro
 		_fin_tour_global()
+	
+	# On passe au joueur suivant
+	index_joueur_actif = (index_joueur_actif + 1) % joueurs.size()
 	
 	# Recharge les PM du joueur actif
 	get_joueur_actif().debut_tour()
@@ -72,6 +80,8 @@ func passer_au_tour_suivant():
 # -----------------------------------------------
 func _fin_tour_global():
 	emit_signal("tour_global_termine", tour_global)
+	# On déclenche la phase boutique avant de passer au tour suivant
+	emit_signal("phase_boutique", tour_global)
 	tour_global += 1
 	print("=== Tour global ", tour_global, " commence ===")
 
