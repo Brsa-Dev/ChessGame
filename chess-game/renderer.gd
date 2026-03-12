@@ -22,6 +22,7 @@ const COULEURS = {
 const COULEURS_JOUEURS = [
 	Color.YELLOW,  # Joueur 1 — jaune
 	Color.BLUE,    # Joueur 2 — bleu
+	Color.GREEN,    # Joueur 3 ← ajouté
 ]
 
 # En haut avec les autres constantes de couleur
@@ -101,14 +102,18 @@ func _dessiner_cases_attaquables():
 				_dessiner_surbrillance(joueur.grid_x, joueur.grid_y, COULEUR_ATTAQUE)
 
 func _dessiner_cases_sort():
-	# On récupère le sort sélectionné
 	var sort = joueur_actif.sorts[sort_selectionne]
+	
+	# La Flèche Rebondissante utilise la portée RÉELLE du joueur
+	# (inclut le +1 du passif Archer en forêt)
+	var portee_effective = joueur_actif.attaque_portee if sort.id == "archer_fleche" else sort.portee
+	
 	for x in range(8):
 		for y in range(8):
 			if x == joueur_actif.grid_x and y == joueur_actif.grid_y:
 				continue
 			var distance = abs(x - joueur_actif.grid_x) + abs(y - joueur_actif.grid_y)
-			if distance <= sort.portee:
+			if distance <= portee_effective:
 				_dessiner_surbrillance(x, y, COULEUR_SORT)
 				
 func _dessiner_surbrillance(x: int, y: int, couleur: Color):
