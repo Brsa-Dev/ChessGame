@@ -5,6 +5,8 @@
 [ext_resource type="Script" uid="uid://d1c4gj8rey8gb" path="res://renderer.gd" id="3_h2yge"]
 [ext_resource type="Script" uid="uid://c7l7r2i3xys5f" path="res://joueur.gd" id="4_1bvp3"]
 [ext_resource type="Script" uid="uid://dwdhc37i2tort" path="res://tour_manager.gd" id="5_lquwl"]
+[ext_resource type="Script" uid="uid://gmarcgm6a54i" path="res://shop_manager.gd" id="6_272bh"]
+[ext_resource type="PackedScene" uid="uid://mbe0rw1qqi34" path="res://shop_ui.tscn" id="7_5vw27"]
 
 [node name="Main" type="Node2D" unique_id=572728295]
 script = ExtResource("1_ig7tw")
@@ -41,6 +43,11 @@ offset_top = -31.0
 grow_horizontal = 0
 grow_vertical = 0
 text = "Fin de tour"
+
+[node name="ShopManager" type="Node" parent="." unique_id=1214474715]
+script = ExtResource("6_272bh")
+
+[node name="ShopUI" parent="." unique_id=2008567203 instance=ExtResource("7_5vw27")]
 
 [connection signal="timeout" from="TourManager/Timer" to="TourManager" method="_on_timer_timeout"]
 [connection signal="pressed" from="UI/BoutonFinTour" to="." method="fin_de_tour"]

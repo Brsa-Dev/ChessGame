@@ -1,0 +1,26 @@
+[gd_scene format=3 uid="uid://mbe0rw1qqi34"]
+
+[ext_resource type="Script" uid="uid://dgvbq33mtqbko" path="res://shop_ui.gd" id="1_fscwk"]
+
+[node name="ShopUI" type="CanvasLayer" unique_id=2008567203]
+script = ExtResource("1_fscwk")
+
+[node name="Panneau" type="PanelContainer" parent="." unique_id=897021197]
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panneau" unique_id=895329842]
+layout_mode = 2
+
+[node name="Titre" type="Label" parent="Panneau/VBoxContainer" unique_id=1934693098]
+layout_mode = 2
+
+[node name="Gold" type="Label" parent="Panneau/VBoxContainer" unique_id=1486791879]
+layout_mode = 2
+
+[node name="Items" type="VBoxContainer" parent="Panneau/VBoxContainer" unique_id=1193764457]
+layout_mode = 2
+
+[node name="BoutonPasser" type="Button" parent="Panneau/VBoxContainer" unique_id=313916431]
+layout_mode = 2
+text = "Passer la boutique"

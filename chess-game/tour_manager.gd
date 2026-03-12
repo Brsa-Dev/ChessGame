@@ -4,6 +4,7 @@ extends Node
 # TOUR MANAGER — Gestion des tours de jeu
 # -----------------------------------------------
 
+var joueurs_ayant_joue: int = 0
 # Liste des joueurs dans l'ordre de jeu
 var joueurs: Array = []
 
@@ -54,12 +55,16 @@ func get_joueur_actif() -> Node:
 # Appelée par main.gd (bouton fin de tour ou timer)
 # -----------------------------------------------
 func passer_au_tour_suivant():
-	# Index suivant en bouclant sur la liste
-	index_joueur_actif = (index_joueur_actif + 1) % joueurs.size()
+	# On incrémente le compteur de joueurs ayant joué
+	joueurs_ayant_joue += 1
 	
-	# Si on revient au joueur 0 → tour global terminé
-	if index_joueur_actif == 0:
+	# Si tous les joueurs ont joué → tour global terminé
+	if joueurs_ayant_joue >= joueurs.size():
+		joueurs_ayant_joue = 0  # On remet le compteur à zéro
 		_fin_tour_global()
+	
+	# On passe au joueur suivant
+	index_joueur_actif = (index_joueur_actif + 1) % joueurs.size()
 	
 	# Recharge les PM du joueur actif
 	get_joueur_actif().debut_tour()
