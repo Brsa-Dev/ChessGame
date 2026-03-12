@@ -55,11 +55,23 @@ func _draw():
 			var couleur = COULEURS_JOUEURS[i]
 			var rayon = 22 if joueur == joueur_actif else 16
 			dessiner_joueur(joueur.grid_x, joueur.grid_y, couleur, rayon)
+
 func _dessiner_cases_accessibles():
 	for x in range(8):
 		for y in range(8):
+			# On ignore la case du joueur actif lui-même
 			if x == joueur_actif.grid_x and y == joueur_actif.grid_y:
 				continue
+			# On ignore les cases occupées par un autre joueur
+			var case_occupee = false
+			for joueur in joueurs:
+				if joueur.est_place and joueur != joueur_actif:
+					if joueur.grid_x == x and joueur.grid_y == y:
+						case_occupee = true
+						break
+			if case_occupee:
+				continue
+			# On surligne uniquement les cases accessibles et libres
 			if joueur_actif.peut_se_deplacer_vers(x, y):
 				_dessiner_surbrillance(x, y)
 

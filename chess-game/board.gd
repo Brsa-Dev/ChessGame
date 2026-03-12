@@ -6,6 +6,10 @@ enum CaseType {
 
 var plateau = []
 
+# Liste des positions occupées par les joueurs
+# Format : { "x,y": true }
+var positions_occupees: Dictionary = {}
+
 func _ready():
 	init_plateau()
 
@@ -34,3 +38,14 @@ func _generer_cases_speciales():
 # Retourne le type d'une case à la position (x, y)
 func get_case(x: int, y: int) -> CaseType:
 	return plateau[x][y]
+	
+func occuper_case(x: int, y: int):
+	positions_occupees[str(x) + "," + str(y)] = true
+
+# Libère la case quand un joueur la quitte
+func liberer_case(x: int, y: int):
+	positions_occupees.erase(str(x) + "," + str(y))
+
+# Retourne true si la case est déjà occupée par un joueur
+func case_occupee(x: int, y: int) -> bool:
+	return positions_occupees.has(str(x) + "," + str(y))
