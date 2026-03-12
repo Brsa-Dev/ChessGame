@@ -51,11 +51,11 @@ func _draw():
 	# 3. On dessine tous les joueurs placés
 	for i in range(joueurs.size()):
 		var joueur = joueurs[i]
-		if joueur != null and joueur.est_place:
+		# On ignore les joueurs morts ou non placés
+		if joueur != null and joueur.est_place and not joueur.est_mort:
 			var couleur = COULEURS_JOUEURS[i]
 			var rayon = 22 if joueur == joueur_actif else 16
 			dessiner_joueur(joueur.grid_x, joueur.grid_y, couleur, rayon)
-
 # Cases de déplacement — jaune, cases libres uniquement
 func _dessiner_cases_accessibles():
 	for x in range(8):
