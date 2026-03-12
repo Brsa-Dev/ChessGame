@@ -62,7 +62,12 @@ func _dessiner_cases_accessibles():
 		for y in range(8):
 			if x == joueur_actif.grid_x and y == joueur_actif.grid_y:
 				continue
-			# On ignore les cases occupées par un autre joueur
+			
+			# On n'affiche pas de surbrillance sur VIDE et MUR
+			var type_case = board.get_case(x, y)
+			if type_case == board.CaseType.VIDE or type_case == board.CaseType.MUR:
+				continue
+			
 			var occupee = false
 			for joueur in joueurs:
 				if joueur.est_place and joueur != joueur_actif:
@@ -73,7 +78,6 @@ func _dessiner_cases_accessibles():
 				continue
 			if joueur_actif.peut_se_deplacer_vers(x, y):
 				_dessiner_surbrillance(x, y, COULEUR_ACCESSIBLE)
-
 # Cases d'attaque — rouge, uniquement sur les ennemis à portée
 func _dessiner_cases_attaquables():
 	# Si le joueur a déjà attaqué ce tour, on n'affiche rien

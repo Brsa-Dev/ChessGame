@@ -21,6 +21,12 @@ func init_plateau():
 		for y in range(8):
 			plateau[x].append(CaseType.NORMAL)
 	_generer_cases_speciales()
+	
+	plateau[0][0] = CaseType.TOUR
+	plateau[7][0] = CaseType.TOUR
+	plateau[0][7] = CaseType.TOUR
+	plateau[7][7] = CaseType.TOUR
+	
 	print("Plateau initialisé !")
 
 func _generer_cases_speciales():

@@ -37,6 +37,14 @@ var a_attaque_ce_tour: bool = false # True si le joueur a déjà attaqué ce tou
 var inventaire: Array = []              # Liste des items achetés
 var achats_par_item: Dictionary = {}    # { "elixir_gold": 1, ... }
 var resistance_degats: float = 0.0     # Cumulable (ex: 0.10 = 10%)
+
+# Résistance temporaire liée à la case Forêt
+# Remise à 0 quand le joueur quitte la case
+var resistance_case: float = 0.0
+
+# Bonus de Range sur les sorts (actif sur une case TOUR)
+var bonus_range_sorts: int = 0
+
 # -----------------------------------------------
 # Place le joueur sur une case de la grille
 # -----------------------------------------------
@@ -63,9 +71,11 @@ func peut_se_deplacer_vers(x: int, y: int) -> bool:
 # -----------------------------------------------
 # Déplace le joueur et consomme les PM
 # -----------------------------------------------
-func deplacer(x: int, y: int):
+func deplacer(x: int, y: int, cout_pm: int = -1):
 	if peut_se_deplacer_vers(x, y):
-		var distance = abs(x - grid_x) + abs(y - grid_y)
+		# Si cout_pm est précisé (ex: Forêt = 2), on l'utilise
+		# Sinon on utilise la distance normale
+		var distance = abs(x - grid_x) + abs(y - grid_y) if cout_pm == -1 else cout_pm
 		pm_actuels -= distance
 		grid_x = x
 		grid_y = y
@@ -99,10 +109,12 @@ func attaquer(cible: Node) -> int:
 # Reçoit des dégâts
 # -----------------------------------------------
 func recevoir_degats(degats: int):
-	var degats_reduits = int(degats * (1.0 - resistance_degats))
+	# On cumule la résistance de l'Amulette + celle de la Forêt
+	var resistance_totale = resistance_degats + resistance_case
+	var degats_reduits = int(degats * (1.0 - resistance_totale))
 	hp_actuels -= degats_reduits
 	hp_actuels = max(0, hp_actuels)
-	print("HP restants : ", hp_actuels, " / ", hp_max)
+	print("HP restants : ", hp_actuels, " / ", hp_max, " (", degats_reduits, " dégâts reçus)")
 	if hp_actuels <= 0:
 		est_mort = true
 		print("Joueur éliminé !")

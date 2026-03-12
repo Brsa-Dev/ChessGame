@@ -112,9 +112,17 @@ func _input(event):
 						print("Cible hors de portée !")
 
 			elif joueur_actif.peut_se_deplacer_vers(cell.x, cell.y):
-				if not board.case_occupee(cell.x, cell.y):
+				var type_case = board.get_case(cell.x, cell.y)
+				# VIDE et MUR sont infranchissables
+				if type_case == board.CaseType.VIDE or type_case == board.CaseType.MUR:
+					print("Case infranchissable !")
+				elif not board.case_occupee(cell.x, cell.y):
 					board.liberer_case(joueur_actif.grid_x, joueur_actif.grid_y)
-					joueur_actif.deplacer(cell.x, cell.y)
+					# La forêt coûte 2 PM au lieu de la distance normale
+					var type_arrivee = board.get_case(cell.x, cell.y)
+					var cout = 2 if type_arrivee == board.CaseType.FORET else -1
+					joueur_actif.deplacer(cell.x, cell.y, cout)
+					_appliquer_effet_case(joueur_actif)
 					board.occuper_case(joueur_actif.grid_x, joueur_actif.grid_y)
 					joueur_selectionne = false
 					print("Déplacé en (", cell.x, ", ", cell.y, ") — PM : ", joueur_actif.pm_actuels)
@@ -137,8 +145,65 @@ func _on_joueur_mort(joueur: Node):
 	board.liberer_case(joueur.grid_x, joueur.grid_y)
 	renderer.queue_redraw()
 
+# -----------------------------------------------
+# Applique l'effet de la case sur laquelle arrive le joueur
+# Appelée après chaque déplacement
+# -----------------------------------------------
+func _appliquer_effet_case(joueur: Node):
+	var type = board.get_case(joueur.grid_x, joueur.grid_y)
+	
+	match type:
+		board.CaseType.LAVE:
+			# 10 dégâts en arrivant sur la lave
+			joueur.recevoir_degats(10)
+			print("🔥 Lave ! -10 HP")
+		
+		board.CaseType.EAU:
+			# +10 HP en arrivant sur l'eau
+			joueur.hp_actuels = min(joueur.hp_actuels + 10, joueur.hp_max)
+			print("💧 Eau ! +10 HP — HP : ", joueur.hp_actuels)
+		
+		board.CaseType.FORET:
+			# +10% résistance tant que le joueur est en forêt
+			joueur.resistance_case = 0.10
+			print("🌲 Forêt ! +10% résistance")
+		
+			# Si on quitte la forêt, on retire le bonus de résistance
+			joueur.resistance_case = 0.0
+		board.CaseType.TOUR:
+			# +1 Range sur les sorts tant que le joueur est sur la Tour
+			joueur.bonus_range_sorts = 1
+			print("🏰 Tour ! +1 Range sur les sorts")
+
+		_:
+			# En quittant n'importe quelle case spéciale
+			# on retire les bonus temporaires
+			joueur.resistance_case = 0.0
+			joueur.bonus_range_sorts = 0
+# -----------------------------------------------
+# Applique les effets persistants en début de tour
+# (rester sur LAVE ou EAU entre les tours)
+# -----------------------------------------------
+func _appliquer_effets_persistants(joueur: Node):
+	var type = board.get_case(joueur.grid_x, joueur.grid_y)
+	
+	match type:
+		board.CaseType.LAVE:
+			joueur.recevoir_degats(10)
+			print("🔥 Dégâts de lave persistants ! -10 HP")
+		
+		board.CaseType.EAU:
+			joueur.hp_actuels = min(joueur.hp_actuels + 10, joueur.hp_max)
+			print("💧 Soin de l'eau persistant ! +10 HP")
+			
 func fin_de_tour():
 	joueur_selectionne = false
+	
+	# Effets persistants sur le joueur qui vient de terminer son tour
+	var joueur_qui_finit = tour_manager.get_joueur_actif()
+	if joueur_qui_finit.est_place:
+		_appliquer_effets_persistants(joueur_qui_finit)
+	
 	tour_manager.passer_au_tour_suivant()
 	var joueur_actif = tour_manager.get_joueur_actif()
 	print("--- Tour du Joueur ", tour_manager.index_joueur_actif + 1, " ---")
