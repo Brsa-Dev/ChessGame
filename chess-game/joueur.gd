@@ -15,7 +15,7 @@
 extends Node
 
 # -------------------------------------------------------
-# Constantes — valeurs par défaut (surridées par les classes)
+# Constantes — valeurs par défaut (surchargées par les classes)
 # -------------------------------------------------------
 const HP_MAX_DEFAUT          : int   = 100
 const PM_MAX_DEFAUT          : int   = 5
@@ -59,7 +59,7 @@ var pm_max     : int = PM_MAX_DEFAUT
 var pm_actuels : int = PM_MAX_DEFAUT
 
 # Malus de PM à appliquer au prochain debut_tour()
-# Déclenché par la Tempête Électrique
+# Déclenché par la Tempête Électrique via event_manager
 var pm_malus_prochain_tour : int = 0
 
 
@@ -172,7 +172,7 @@ var reduction_cout_tempete : int = 0
 
 # -------------------------------------------------------
 # Place le joueur sur la case (x, y) du plateau
-# Appelée par main.gd lors du placement initial
+# Appelée par input_handler lors du placement initial
 # -------------------------------------------------------
 func placer(x: int, y: int) -> void:
 	grid_x    = x
@@ -308,7 +308,7 @@ func appliquer_dots() -> void:
 		if dot["tours_restants"] <= 0:
 			dots_expires.append(source_id)
 
-	# Suppression après itération pour éviter les erreurs
+	# Suppression après itération pour éviter les erreurs de modification en cours
 	for source_id in dots_expires:
 		dots_actifs.erase(source_id)
 		print("☠️ DoT [%s] expiré" % source_id)
@@ -319,29 +319,32 @@ func appliquer_dots() -> void:
 # -------------------------------------------------------
 # Réinitialise PM, attaque, cooldowns, immobilisation
 # et applique les DoT et malus en attente.
-# Surchargée par Guerrier (gestion Rage) et Fripon (passif).
+# Surchargée par Guerrier (gestion Rage).
 # =======================================================
 func debut_tour() -> void:
-	# Recharge les PM
+	# Recharge les PM au maximum
 	pm_actuels = pm_max
 
-	# Applique le malus de PM de la Tempête Électrique (si actif)
+	# Applique le malus de PM de la Tempête Électrique si actif.
+	# On sauvegarde la valeur AVANT de la remettre à 0
+	# pour pouvoir l'afficher correctement dans le print.
 	if pm_malus_prochain_tour > 0:
-		pm_actuels             = max(0, pm_actuels - pm_malus_prochain_tour)
-		pm_malus_prochain_tour = 0  # Consommé — s'applique une seule fois
-		print("⚡ Malus Tempête : -%d PM ce tour" % pm_malus_prochain_tour)
+		var malus_applique     : int = pm_malus_prochain_tour
+		pm_actuels                   = max(0, pm_actuels - malus_applique)
+		pm_malus_prochain_tour       = 0
+		print("⚡ Malus Tempête : -%d PM ce tour" % malus_applique)
 
-	# Réinitialise l'attaque
+	# Réinitialise le verrou d'attaque
 	a_attaque_ce_tour = false
 
 	# Réduit le cooldown de tous les sorts de 1 tour
 	for sort in sorts:
 		sort.reduire_cooldown()
 
-	# Applique les DoT actifs
+	# Applique les DoT actifs (hache empoisonnée, lame, etc.)
 	appliquer_dots()
 
-	# Réduit l'immobilisation
+	# Réduit l'immobilisation restante (Gel, Piège)
 	if tours_immobilise > 0:
 		tours_immobilise -= 1
 		print("❄️ Immobilisé encore %d tour(s)" % tours_immobilise)
