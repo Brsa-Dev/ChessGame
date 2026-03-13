@@ -15,14 +15,6 @@
 [node name="Main" type="Node2D" unique_id=572728295]
 script = ExtResource("1_ig7tw")
 
-[node name="Fond" type="ColorRect" parent="." unique_id=1953549344]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-color = Color(0.16862746, 0.16862746, 0.16862746, 1)
-
 [node name="Board" type="Node" parent="." unique_id=909297872]
 script = ExtResource("2_0xm2m")
 
@@ -63,8 +55,10 @@ text = "Fin de tour"
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -1142.0
-offset_right = -862.0
+offset_left = -280.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 350.0
 grow_horizontal = 0
 
 [node name="ShopManager" type="Node" parent="." unique_id=1214474715]

@@ -39,3 +39,15 @@ func ajouter(message: String, couleur: Color = COULEUR_SYSTEME):
 		var ancien = conteneur_messages.get_child(count - 1)
 		conteneur_messages.remove_child(ancien)  # Retire immédiatement (pas queue_free)
 		ancien.queue_free()                      # Libère la mémoire après
+
+# -----------------------------------------------
+# Repositionne le Log quand la fenêtre est redimensionnée
+# -----------------------------------------------
+func _notification(what):
+	if what == NOTIFICATION_WM_SIZE_CHANGED:
+		_repositionner()
+
+func _repositionner():
+	var taille = get_viewport().get_visible_rect().size
+	set_position(Vector2(5, 5))
+	set_size(Vector2(195, taille.y - 10))

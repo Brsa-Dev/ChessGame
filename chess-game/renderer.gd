@@ -2,7 +2,7 @@ extends Node2D
 
 const TILE_W = 128
 const TILE_H = 64
-const OFFSET = Vector2(600, 100)
+var OFFSET: Vector2 = Vector2(440, 80) 
 
 var board: Node = null
 var joueurs: Array = []
@@ -37,6 +37,7 @@ const COULEUR_ACCESSIBLE = Color(1.0, 1.0, 0.3, 0.5)
 const COULEUR_ATTAQUE = Color(1.0, 0.2, 0.2, 0.5)
 
 func _ready():
+	_centrer_plateau()
 	print("Renderer prêt !")
 
 func _draw():
@@ -158,3 +159,16 @@ func point_in_tile(pos: Vector2, x: int, y: int) -> bool:
 	var dx = abs(pos.x - cx)
 	var dy = abs(pos.y - cy)
 	return (dx / (TILE_W / 2.0) + dy / (TILE_H / 2.0)) <= 1.0
+
+func _centrer_plateau():
+	var taille = get_viewport().get_visible_rect().size
+	var largeur_utile = taille.x - 200 - 260
+	var centre_x = 200 + (largeur_utile / 2)
+	# Le plateau fait 8 cases → hauteur totale = 8 * TILE_H
+	# On le centre verticalement aussi
+	OFFSET = Vector2(centre_x, (taille.y - 8 * TILE_H) / 2 + 30)
+
+func _notification(what):
+	if what == NOTIFICATION_WM_SIZE_CHANGED:
+		_centrer_plateau()
+		queue_redraw()

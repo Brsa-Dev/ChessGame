@@ -21,6 +21,7 @@ var board: Node = null
 # Les 3 RichTextLabel, un par joueur — créés dans _ready()
 var _labels: Array = []
 
+var _panel: PanelContainer = null
 # -----------------------------------------------
 # _ready — Construit toute l'interface en code
 # Pas de .tscn nécessaire sauf le nœud racine
@@ -28,6 +29,7 @@ var _labels: Array = []
 func _ready():
 	# --- Conteneur principal ancré à droite ---
 	var panel = PanelContainer.new()
+	_panel = panel  # On garde la référence pour le resize
 	panel.anchor_left   = 1.0
 	panel.anchor_right  = 1.0
 	panel.anchor_top    = 0.0
@@ -56,6 +58,11 @@ func _ready():
 	titre.add_theme_color_override("font_color", Color.WHITE)
 	vbox.add_child(titre)
 
+	var taille = get_viewport().get_visible_rect().size
+	bouton_fin_tour.set_position(Vector2(
+		taille.x / 2 - 60,   # Centré horizontalement
+		taille.y - 50         # Collé en bas
+	))
 	# Crée un bloc RichTextLabel par joueur (3 joueurs)
 	for i in range(3):
 		vbox.add_child(HSeparator.new())
@@ -199,7 +206,7 @@ func _get_effets_actifs(joueur: Node, tous: Array) -> String:
 	for source_id in joueur.dots_actifs:
 		var dot = joueur.dots_actifs[source_id]
 		effets.append(
-			"[color=#ff8800]  ☠️ DoT "" + source_id + "" : "
+			"[color=#ff8800]  ☠️ DoT '" + source_id + "' : "
 			+ str(dot["degats"]) + "/tour (" + str(dot["tours_restants"]) + "T)[/color]"
 		)
 
@@ -260,3 +267,19 @@ func _get_effets_actifs(joueur: Node, tous: Array) -> String:
 			)
 
 	return "\n".join(effets)
+
+# -----------------------------------------------
+# Repositionne le HUD quand la fenêtre est redimensionnée
+# Appelé automatiquement par Godot
+# -----------------------------------------------
+func _notification(what):
+	if what == NOTIFICATION_WM_SIZE_CHANGED:
+		_repositionner()
+
+func _repositionner():
+	if _panel == null:
+		return
+	var taille = get_viewport().get_visible_rect().size
+	# Stick à droite : x = largeur fenêtre - largeur HUD
+	_panel.set_position(Vector2(taille.x - 260, 0))
+	_panel.set_size(Vector2(260, taille.y))

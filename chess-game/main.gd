@@ -23,14 +23,23 @@ var forets_temporaires: Array = []
 
 # -----------------------------------------------
 func _ready():
+	# --- Plateau ---
 	renderer.board = board
-	# Donne au HUD accès au board pour lire les types de cases
+
+	# --- HUD : on donne le board AVANT d'initialiser ---
+	# Le rafraichir() sera appelé APRÈS tour_manager.initialiser()
 	hud_ui.board = board
-	hud_ui.rafraichir([joueur1, joueur2, joueur3], tour_manager.get_joueur_actif())
-	
+
+	# --- Renderer ---
 	renderer.joueurs = [joueur1, joueur2, joueur3]
+
+	# --- Tour Manager — DOIT être avant tout appel à get_joueur_actif() ---
 	tour_manager.initialiser([joueur1, joueur2, joueur3])
+
+	# --- Renderer : joueur actif connu maintenant ---
 	renderer.joueur_actif = tour_manager.get_joueur_actif()
+
+	# --- Signaux ---
 	bouton_fin_tour.pressed.connect(fin_de_tour)
 	joueur1.mort.connect(_on_joueur_mort.bind(joueur1))
 	joueur2.mort.connect(_on_joueur_mort.bind(joueur2))
@@ -39,6 +48,10 @@ func _ready():
 	shop_ui.boutique_fermee.connect(_on_boutique_fermee)
 	shop_ui.shop_manager = shop_manager
 	tour_manager.tour_global_termine.connect(_on_tour_global_termine)
+
+	# --- HUD : maintenant que tout est initialisé, on peut rafraîchir ---
+	hud_ui.rafraichir([joueur1, joueur2, joueur3], tour_manager.get_joueur_actif())
+
 	renderer.queue_redraw()
 	print("Main prêt !")
 
@@ -388,12 +401,15 @@ func _utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) ->
 			cible.recevoir_degats(degats)
 			joueur.gagner_gold_sur_degats(degats)
 			var bloque = _repousser_joueur(joueur, cible, 2)
+			# Log TOUJOURS — avec ou sans impact mur
+			_log("🛡️ " + joueur.name + " — Bouclier : " + str(degats) + " dmg + repousse " + cible.name, joueur)
 			if bloque:
 				cible.recevoir_degats(10)
 				joueur.gagner_gold_sur_degats(10)
 				print("💥 Impact mur ! +10 dmg")
-				_log("🛡️ " + joueur.name + " — Bouclier : " + str(degats) + " dmg + repousse " + cible.name, joueur)
-				_rafraichir_hud()
+				_log("💥 Impact mur sur " + cible.name + " ! +10 dmg", joueur)
+			_rafraichir_hud()
+			return true  # ← ce return manquait aussi !
 		"guerrier_rage":
 			joueur.gold -= sort.cout_gold
 			joueur.pm_actuels -= sort.cout_pm
@@ -437,6 +453,7 @@ func _utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) ->
 				"tours_restants": 2, "lanceur": joueur
 			})
 			print("☄️ Météore ! Impact dans 2 tours en (", cible_x, ",", cible_y, ")")
+			_log("☄️ " + joueur.name + " — Météore en route ! Impact dans 2 tours", joueur)
 			_rafraichir_hud()
 			return true
 		"mage_tempete":
@@ -481,12 +498,12 @@ func _utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) ->
 			if rebond_cible:
 				# Ligne de vue : entre CIBLE INITIALE et CIBLE DU REBOND
 				if _a_ligne_de_vue(cible.grid_x, cible.grid_y, rebond_cible.grid_x, rebond_cible.grid_y):
-					# Dégâts rebond = attaque_degats / 2 (10 base, 15 forêt)
 					var degats_rebond = (joueur.attaque_degats / 2) + joueur.bonus_degats_sorts
 					rebond_cible.recevoir_degats(degats_rebond)
 					joueur.gagner_gold_sur_degats(degats_rebond)
 					print("🏹 Rebond sur ", rebond_cible.name, " ! ", degats_rebond, " dmg")
-					
+					# ← AJOUTE ICI
+					_log("🏹 Rebond sur " + rebond_cible.name + " — " + str(degats_rebond) + " dmg", joueur)
 				else:
 					print("🏹 Rebond annulé — pas de ligne de vue")
 			else:
@@ -723,6 +740,8 @@ func _verifier_pieges(joueur: Node):
 			joueur.tours_immobilise = 1
 			pieges_declenches.append(piege)
 			print("🪤 Piège déclenché ! 10 dmg + immobilisé 1 tour")
+			# ← AJOUTE ICI
+			_log("🪤 " + joueur.name + " déclenche un piège ! 10 dmg + immobilisé 1 tour", joueur)
 	for piege in pieges_declenches:
 		pieges_actifs.erase(piege)
 

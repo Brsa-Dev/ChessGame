@@ -12,8 +12,8 @@ var grid_x: int = 0
 var grid_y: int = 0
 var est_place: bool = false
 
-var pm_max: int = 10
-var pm_actuels: int = 10
+var pm_max: int = 5
+var pm_actuels: int = 5
 
 var hp_max: int = 100
 var hp_actuels: int = 100
