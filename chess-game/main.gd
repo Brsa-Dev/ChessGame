@@ -121,10 +121,7 @@ func _on_boutique_fermee():
 # Gestion des inputs
 # -----------------------------------------------
 func _input(event):
-	if event is InputEventKey and event.pressed:
-		if event.keycode == KEY_F:
-			inventory_ui.toggle(tour_manager.get_joueur_actif())
-			return
+	
 	if event is InputEventKey and event.pressed:
 		if event.keycode == KEY_F:
 			inventory_ui.toggle(tour_manager.get_joueur_actif())
@@ -318,6 +315,43 @@ func fin_de_tour():
 	if joueur_qui_finit.est_place:
 		_appliquer_effets_persistants(joueur_qui_finit)
 	
+	
+	# -----------------------------------------------
+# FORÊTS TEMPORAIRES (Pluie de Flèches)
+# Décrémente seulement quand le lanceur finit son tour.
+# Même logique que les météores.
+# -----------------------------------------------
+	var forets_a_supprimer = []
+	for foret in forets_temporaires:
+		if foret["lanceur"] == joueur_qui_finit:
+			foret["tours_restants"] -= 1
+			print("🌲 Forêt temp — ", foret["tours_restants"], " tour(s) avant disparition")
+			if foret["tours_restants"] <= 0:
+				forets_a_supprimer.append(foret)
+	for foret in forets_a_supprimer:
+		forets_temporaires.erase(foret)
+		_restaurer_cases_foret(foret)
+# -----------------------------------------------
+# MÉTÉORES — on décrémente seulement quand
+# le LANCEUR termine son tour.
+# meteores_en_attente est une liste → on itère.
+# -----------------------------------------------
+	var meteores_a_exploser = []
+
+	for meteore in meteores_en_attente:
+		# On n'agit que si c'est bien le lanceur qui finit son tour
+		if meteore["lanceur"] == joueur_qui_finit:
+			meteore["tours_restants"] -= 1
+			print("☄️ Météore — tours restants : ", meteore["tours_restants"])
+			if meteore["tours_restants"] <= 0:
+				meteores_a_exploser.append(meteore)
+
+	# On explose séparément pour éviter de modifier la liste pendant l'itération
+	for meteore in meteores_a_exploser:
+		_exploser_meteore(meteore)
+		meteores_en_attente.erase(meteore)
+	
+	
 	tour_manager.passer_au_tour_suivant()
 	var joueur_actif = tour_manager.get_joueur_actif()
 
@@ -341,30 +375,31 @@ func fin_de_tour():
 
 # -----------------------------------------------
 func _on_tour_global_termine(_numero_tour: int):
-	
+
+	# -----------------------------------------------
+	# Événements aléatoires (mines, coffres, etc.)
+	# -----------------------------------------------
 	event_manager.verifier_tour(_numero_tour)
-	
+
+	# -----------------------------------------------
+	# Inondation — réduit la durée des cases inondées
+	# et ré-applique l'effet de case aux joueurs dessus
+	# -----------------------------------------------
 	var cases_restaurees = event_manager.reduire_inondations()
 	if cases_restaurees.size() > 0:
-		# Ré-applique l'effet de case aux joueurs sur les cases restaurées
 		for case_info in cases_restaurees:
 			var j = _get_joueur_en(case_info["x"], case_info["y"])
 			if j:
 				_appliquer_effet_case(j)
 		_log("🍂 === Les cases inondées sont restaurées ===")
-		
+
 	renderer.queue_redraw()
-	
-	print("=== Fin du tour global ", _numero_tour, " — Traitement météores/laves ===")
-	var meteores_a_supprimer = []
-	for meteore in meteores_en_attente:
-		meteore["tours_restants"] -= 1
-		print("☄️ Météore — ", meteore["tours_restants"], " tour(s) avant impact")
-		if meteore["tours_restants"] <= 0:
-			_exploser_meteore(meteore)
-			meteores_a_supprimer.append(meteore)
-	for m in meteores_a_supprimer:
-		meteores_en_attente.erase(m)
+
+	# -----------------------------------------------
+	# Laves temporaires (Météore) — décrémente la durée
+	# NB : les météores eux-mêmes sont gérés dans
+	# fin_de_tour() au tour du lanceur — PAS ICI.
+	# -----------------------------------------------
 	var laves_a_supprimer = []
 	for lave in laves_temporaires:
 		lave["tours_restants"] -= 1
@@ -374,15 +409,6 @@ func _on_tour_global_termine(_numero_tour: int):
 			laves_a_supprimer.append(lave)
 	for l in laves_a_supprimer:
 		laves_temporaires.erase(l)
-	var forets_a_supprimer = []
-	for foret in forets_temporaires:
-		foret["tours_restants"] -= 1
-		print("🌲 Forêt temp — ", foret["tours_restants"], " tour(s) avant disparition")
-		if foret["tours_restants"] <= 0:
-			_restaurer_cases_foret(foret)
-			forets_a_supprimer.append(foret)
-	for f in forets_a_supprimer:
-		forets_temporaires.erase(f)
 
 # -----------------------------------------------
 func _appliquer_effet_case(joueur: Node):
@@ -566,18 +592,22 @@ func _utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) ->
 			sort.declencher_cooldown()
 			meteores_en_attente.append({
 				"cible_x": cible_x, "cible_y": cible_y,
-				"tours_restants": 2, "lanceur": joueur
+				"tours_restants": 3, "lanceur": joueur
 			})
 			print("☄️ Météore ! Impact dans 2 tours en (", cible_x, ",", cible_y, ")")
 			_log("☄️ " + joueur.name + " — Météore en route ! Impact dans 2 tours", joueur)
 			_rafraichir_hud()
 			return true
 		"mage_tempete":
+			print("DEBUG Tempête — cout_gold: ", sort.cout_gold,
+		  " | reduction: ", joueur.reduction_cout_tempete,
+		  " | cout_final: ", max(0, sort.cout_gold - joueur.reduction_cout_tempete),
+		  " | gold joueur: ", joueur.gold)
 			var cout_tempete = max(0, sort.cout_gold - joueur.reduction_cout_tempete)
 			if joueur.gold < cout_tempete:
 				print("Pas assez de Gold pour Tempête !")
 				return false
-			joueur.gold -= sort.cout_gold
+			joueur.gold -= cout_tempete   # ← WAS: sort.cout_gold — CORRIGÉ
 			joueur.pm_actuels -= sort.cout_pm
 			sort.declencher_cooldown()
 			for j in [joueur1, joueur2, joueur3]:
@@ -687,7 +717,11 @@ func _utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) ->
 						continue
 					cases_transformees.append({"x": x, "y": y, "type_original": type_case})
 					board.plateau[x][y] = board.CaseType.FORET
-			forets_temporaires.append({"cases": cases_transformees, "tours_restants": 3})
+			forets_temporaires.append({
+				"cases": cases_transformees,
+				"tours_restants": 3,      
+				"lanceur": joueur         
+			})			
 			renderer.queue_redraw()
 			print("🌲 Pluie de Flèches ! ", cases_transformees.size(), " case(s) → Forêt")
 			_log("🏹 " + joueur.name + " — Pluie de Flèches en (" + str(cible_x) + "," + str(cible_y) + ")", joueur)
