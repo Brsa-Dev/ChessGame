@@ -1,98 +1,123 @@
-# shop_ui.gd
-# -----------------------------------------------
-# SHOP UI — Interface visuelle de la boutique
-# Affiche les items, gère les clics d'achat
-# Communique avec shop_manager.gd pour la logique
-# -----------------------------------------------
+# =======================================================
+# UI/shop_ui.gd
+# -------------------------------------------------------
+# Affichage de la boutique — NE contient PAS de logique d'achat.
+#
+#   - Affiche les items disponibles pour le joueur actif
+#   - Grise les boutons si le joueur ne peut pas acheter
+#   - Émet boutique_fermee quand le joueur passe ou achète tout
+#
+# La logique d'achat et les effets sont dans shop_manager.gd.
+# =======================================================
 extends CanvasLayer
 
-# Référence au shop_manager (assignée par main.gd)
-var shop_manager: Node = null
 
-# Le joueur qui est en train d'acheter
-var joueur_actif: Node = null
+# =======================================================
+# RÉFÉRENCES — Nœuds de la scène (définis dans shop_ui.tscn)
+# =======================================================
 
-# -----------------------------------------------
-# Nœuds de l'interface (assignés dans _ready)
-# -----------------------------------------------
+@onready var _panneau         : PanelContainer = $Panneau
+@onready var _label_titre     : Label          = $Panneau/VBoxContainer/Titre
+@onready var _label_gold      : Label          = $Panneau/VBoxContainer/Gold
+@onready var _conteneur_items : VBoxContainer  = $Panneau/VBoxContainer/Items
+@onready var _bouton_passer   : Button         = $Panneau/VBoxContainer/BoutonPasser
 
-@onready var panneau         = $Panneau
-@onready var label_titre     = $Panneau/VBoxContainer/Titre
-@onready var label_gold      = $Panneau/VBoxContainer/Gold
-@onready var conteneur_items = $Panneau/VBoxContainer/Items
-@onready var bouton_passer   = $Panneau/VBoxContainer/BoutonPasser
 
-# Signal émis quand le joueur a terminé ses achats
+# =======================================================
+# RÉFÉRENCES — Injectées par main.gd
+# =======================================================
+
+var shop_manager : Node = null
+
+
+# =======================================================
+# ÉTAT
+# =======================================================
+
+var _joueur_actif : Node = null  # Joueur en train d'acheter
+
+
+# =======================================================
+# SIGNAUX
+# =======================================================
+
+# Émis quand le joueur clique "Passer" — main.gd passe au joueur suivant
 signal boutique_fermee
 
-# -----------------------------------------------
-# Initialisation — on cache la boutique au démarrage
-# -----------------------------------------------
-func _ready():
-	panneau.visible = false
-	bouton_passer.pressed.connect(_on_passer)
 
-# -----------------------------------------------
-# Ouvre la boutique pour un joueur donné
-# Appelée par main.gd
-# -----------------------------------------------
-func ouvrir(joueur: Node):
-	joueur_actif = joueur
-	panneau.visible = true
-	
-	# Titre avec le numéro du joueur
-	label_titre.text = "🛒 Boutique — Joueur %s" % joueur.name
-	
-	# Affiche le gold actuel du joueur
+# =======================================================
+# INITIALISATION
+# =======================================================
+func _ready() -> void:
+	_panneau.visible = false
+	_bouton_passer.pressed.connect(_on_passer)
+
+
+# =======================================================
+# API PUBLIQUE
+# =======================================================
+
+# -------------------------------------------------------
+# Ouvre la boutique pour un joueur donné.
+# Appelée par main.gd dans _on_phase_boutique().
+# -------------------------------------------------------
+func ouvrir(joueur: Node) -> void:
+	_joueur_actif    = joueur
+	_panneau.visible = true
+
+	_label_titre.text = "🛒 Boutique — %s" % joueur.name
 	_rafraichir_gold()
-	
-	# Génère un bouton par item dans le stock
 	_afficher_items()
-	
-	print("Boutique ouverte pour : ", joueur.name)
 
-# -----------------------------------------------
-# Met à jour l'affichage du gold
-# -----------------------------------------------
-func _rafraichir_gold():
-	label_gold.text = "💰 Gold : %d" % joueur_actif.gold
+	print("Boutique ouverte pour : %s" % joueur.name)
 
-# -----------------------------------------------
-# Génère dynamiquement les boutons d'items
-# On vide d'abord le conteneur pour éviter les doublons
-# -----------------------------------------------
-func _afficher_items():
-	for enfant in conteneur_items.get_children():
+
+# =======================================================
+# AFFICHAGE
+# =======================================================
+
+func _rafraichir_gold() -> void:
+	_label_gold.text = "💰 Gold : %d" % _joueur_actif.gold
+
+
+# -------------------------------------------------------
+# Reconstruit les boutons d'items à chaque rafraîchissement.
+# Filtre les items par classe du joueur via shop_manager.
+# -------------------------------------------------------
+func _afficher_items() -> void:
+	# Vide le conteneur avant de reconstruire
+	for enfant in _conteneur_items.get_children():
 		enfant.queue_free()
 
-	# ← Récupère les items filtrés par classe du joueur actif
-	var items_visibles = shop_manager.get_stock_pour_joueur(joueur_actif)
+	var items_visibles : Array = shop_manager.get_stock_pour_joueur(_joueur_actif)
 
 	for item in items_visibles:
-		var bouton = Button.new()
-		# Préfixe classe pour les items non-communs
-		var prefix = "" if item.classe_requise == "" else "[" + item.classe_requise.capitalize() + "] "
-		bouton.text = "%s%s — %d Gold\n%s" % [prefix, item.nom, item.prix, item.description]
-		bouton.autowrap_mode = TextServer.AUTOWRAP_WORD
+		var bouton : Button = Button.new()
+
+		# Préfixe de classe pour les items non-communs
+		var prefix : String = "" if item.classe_requise == "" else "[%s] " % item.classe_requise.capitalize()
+		bouton.text              = "%s%s — %d Gold\n%s" % [prefix, item.nom, item.prix, item.description]
+		bouton.autowrap_mode     = TextServer.AUTOWRAP_WORD
 		bouton.custom_minimum_size = Vector2(300, 60)
-		bouton.disabled = not shop_manager.peut_acheter(joueur_actif, item)
+
+		# Grisé si le joueur ne peut pas acheter (or insuffisant ou limite atteinte)
+		bouton.disabled = not shop_manager.peut_acheter(_joueur_actif, item)
 		bouton.pressed.connect(_on_acheter.bind(item))
-		conteneur_items.add_child(bouton)
+		_conteneur_items.add_child(bouton)
 
-# -----------------------------------------------
-# Appelée quand le joueur clique sur un item
-# -----------------------------------------------
-func _on_acheter(item: Resource):
-	shop_manager.acheter(joueur_actif, item)
-	
-	# On rafraîchit l'affichage après l'achat
+
+# =======================================================
+# CALLBACKS
+# =======================================================
+
+func _on_acheter(item: Resource) -> void:
+	shop_manager.acheter(_joueur_actif, item)
+	# Rafraîchit le gold ET grise les boutons si nécessaire
 	_rafraichir_gold()
-	_afficher_items()  # Remet à jour les boutons (grisés si plus assez de gold)
+	_afficher_items()
 
-# -----------------------------------------------
-# Appelée quand le joueur clique "Passer"
-# -----------------------------------------------
-func _on_passer():
-	panneau.visible = false
-	print("Joueur ", joueur_actif.name, " passe la boutique")
+
+func _on_passer() -> void:
+	_panneau.visible = false
+	print("Joueur %s passe la boutique" % _joueur_actif.name)
 	emit_signal("boutique_fermee")

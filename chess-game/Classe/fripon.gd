@@ -1,57 +1,86 @@
 # =======================================================
 # Classe/fripon.gd
 # -------------------------------------------------------
-# Classe Fripon — mobilité et combos.
+# Classe Fripon — mobilité, combos et or.
 #
 # Spécialités :
-#   - Passif : peut réattaquer après chaque déplacement
-#   - Gain de Gold x2 sur les dégâts (+1G/5dmg au lieu de /10)
-#   - Ruée : se déverrouille après 3 attaques
-#   - Lame Empoisonnée + Dérobade + Frénésie
+#   - Passif Déplacement : peut réattaquer après chaque déplacement
+#     (a_attaque_ce_tour réinitialisé dans input_handler._deplacer())
+#   - Passif Gold : +1 Gold tous les 5 dégâts (2x plus que les autres)
+#   - Ruée : déverrouillée après 3 attaques de base
+#   - Sorts : Ruée, Dérobade (marque + explosion), Lame Empoisonnée, Frénésie
 # =======================================================
 extends "res://joueur.gd"
 
-# -------------------------------------------------------
-# Constantes — stats de base du Fripon
-# -------------------------------------------------------
-const FRIPON_HP_MAX          : int = 90
-const FRIPON_ATTAQUE_DEGATS  : int = 10
-const FRIPON_ATTAQUE_PORTEE  : int = 1
-const FRIPON_COUT_PM         : int = 1
 
+# =======================================================
+# CONSTANTES — Stats de base
+# =======================================================
+
+const FRIPON_HP_MAX         : int = 90
+const FRIPON_ATTAQUE_DEGATS : int = 10
+const FRIPON_ATTAQUE_PORTEE : int = 1
+const FRIPON_COUT_PM        : int = 1
+
+
+# =======================================================
+# CONSTANTES — Passif Gold
 # -------------------------------------------------------
-# Constantes — passif Gold
-# Le Fripon gagne +1 Gold tous les 5 dégâts (au lieu de 10)
-# -------------------------------------------------------
+# Le Fripon gagne 2x plus de Gold que les autres classes :
+# +1 Gold tous les 5 dégâts au lieu de 10 (joueur.GOLD_PAR_DEGATS)
+# =======================================================
 const FRIPON_GOLD_PAR_DEGATS : int = 5
 
-# -------------------------------------------------------
-# Constantes — Ruée
-# -------------------------------------------------------
-const RUEE_ATTAQUES_REQUISES : int = 3  # Attaques pour déverrouiller la Ruée
 
-# -------------------------------------------------------
-# État interne — passif déplacement
-# -------------------------------------------------------
-var s_est_deplace_ce_tour : bool = false  # Suivi du déplacement ce tour
+# =======================================================
+# CONSTANTES — Ruée
+# =======================================================
 
-# -------------------------------------------------------
-# État interne — Ruée
-# -------------------------------------------------------
-var ruee_disponible      : bool = true  # Disponible au démarrage
-var attaques_depuis_ruee : int  = 0     # Compteur — reset à l'utilisation de la Ruée
-
-# -------------------------------------------------------
-# État interne — Lame Empoisonnée
-# -------------------------------------------------------
-var lame_active : bool = false  # true = prochaine attaque inflige +10dmg + DoT
-
-# -------------------------------------------------------
-# État interne — Frénésie
-# -------------------------------------------------------
-var frenesie_active : bool = false  # true = attaques à 0 PM ce tour
+# Nombre d'attaques de base pour recharger la Ruée après utilisation
+const RUEE_ATTAQUES_REQUISES : int = 3
 
 
+# =======================================================
+# ÉTAT — Déplacement
+# =======================================================
+
+# Suivi du déplacement pour les passifs qui en dépendent (Frénésie, etc.)
+var s_est_deplace_ce_tour : bool = false
+
+
+# =======================================================
+# ÉTAT — Ruée
+# =======================================================
+
+# true au démarrage — se verrouille après utilisation
+var ruee_disponible      : bool = true
+
+# Compteur d'attaques depuis la dernière utilisation de la Ruée
+# Réinitialisé à 0 à chaque utilisation
+var attaques_depuis_ruee : int  = 0
+
+
+# =======================================================
+# ÉTAT — Lame Empoisonnée
+# =======================================================
+
+# true = la prochaine attaque de base applique +10 dmg + DoT
+# Consommé et remis à false dans fripon.attaquer()
+var lame_active : bool = false
+
+
+# =======================================================
+# ÉTAT — Frénésie
+# =======================================================
+
+# true = attaques à 0 PM ce tour (consommation ignorée dans attaquer())
+# Remis à false au début du tour suivant via debut_tour()
+var frenesie_active : bool = false
+
+
+# =======================================================
+# INITIALISATION
+# =======================================================
 func _ready() -> void:
 	hp_max          = FRIPON_HP_MAX
 	hp_actuels      = FRIPON_HP_MAX
@@ -66,10 +95,10 @@ func _ready() -> void:
 # =======================================================
 # OVERRIDE — peut_attaquer
 # -------------------------------------------------------
-# Ordre de vérification IMPORTANT :
+# Ordre de vérification :
 #   1. Distance — toujours vérifiée
-#   2. a_attaque_ce_tour — même en Frénésie (pas d'attaques illimitées)
-#   3. PM — ignorés en Frénésie (coût = 0)
+#   2. a_attaque_ce_tour — bloqué même en Frénésie
+#   3. PM — ignorés en Frénésie uniquement
 # =======================================================
 func peut_attaquer(cible_x: int, cible_y: int) -> bool:
 	var distance : int = abs(cible_x - grid_x) + abs(cible_y - grid_y)
@@ -85,13 +114,14 @@ func peut_attaquer(cible_x: int, cible_y: int) -> bool:
 # =======================================================
 # OVERRIDE — attaquer
 # -------------------------------------------------------
-# Gère la Frénésie (0 PM), la Lame Empoisonnée et la Ruée
+# Gère la Frénésie (coût 0 PM), la Lame Empoisonnée et
+# le compteur de Ruée.
 # =======================================================
 func attaquer(cible: Node) -> int:
 	if not peut_attaquer(cible.grid_x, cible.grid_y):
 		return 0
 
-	# Frénésie → coût 0 PM, sinon coût normal
+	# Frénésie → coût 0 PM pour toutes les attaques ce tour
 	var cout_reel : int = 0 if frenesie_active else attaque_cout_pm
 	pm_actuels        -= cout_reel
 	a_attaque_ce_tour  = true
@@ -99,7 +129,7 @@ func attaquer(cible: Node) -> int:
 	cible.recevoir_degats(attaque_degats)
 	gagner_gold_sur_degats(attaque_degats)
 
-	# Synergie Lame Empoisonnée — +10 dmg + DoT rafraîchi
+	# Lame Empoisonnée — +10 dmg immédiats + DoT rafraîchi sur la cible
 	if lame_active:
 		cible.recevoir_degats(10)
 		gagner_gold_sur_degats(10)
@@ -107,7 +137,7 @@ func attaquer(cible: Node) -> int:
 		lame_active = false
 		print("☠️ Lame — +10 dmg + DoT rafraîchi !")
 
-	# Compteur Ruée — incrémenté à chaque attaque de base
+	# Compteur Ruée — chaque attaque rapproche du déverrouillage
 	attaques_depuis_ruee += 1
 	if not ruee_disponible and attaques_depuis_ruee >= RUEE_ATTAQUES_REQUISES:
 		ruee_disponible = true
@@ -119,7 +149,8 @@ func attaquer(cible: Node) -> int:
 
 # =======================================================
 # OVERRIDE — gagner_gold_sur_degats
-# Le Fripon gagne 2x plus de Gold (+1G tous les 5 dmg)
+# -------------------------------------------------------
+# +1 Gold tous les FRIPON_GOLD_PAR_DEGATS dégâts (2x la base)
 # =======================================================
 func gagner_gold_sur_degats(degats: int) -> void:
 	var gold_gagne : int = degats / FRIPON_GOLD_PAR_DEGATS

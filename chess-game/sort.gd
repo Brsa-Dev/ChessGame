@@ -2,49 +2,81 @@
 # sort.gd
 # -------------------------------------------------------
 # Ressource de base pour tous les sorts du jeu.
-# Chaque sort est créé via la fonction statique creer().
-# Les classes filles instancient leurs sorts dans
-# leurs fichiers xxx_sorts.gd respectifs.
+#
+#   - Champs d'un sort (id, portée, CD, coûts, ligne de vue)
+#   - État du cooldown (disponible / en recharge)
+#   - Créé via la fonction statique creer() dans les fichiers
+#     xxx_sorts.gd — jamais instancié directement
+#
+# Une instance par sort par joueur — les sorts NE sont PAS partagés
+# entre joueurs pour que chaque CD soit indépendant.
 # =======================================================
 extends Resource
 
-# -------------------------------------------------------
-# Identifiant unique du sort — utilisé pour le dispatch
-# dans sort_handler.gd (ex: "guerrier_mur", "mage_gel")
-# -------------------------------------------------------
-var id          : String = ""
 
-# Nom affiché dans le HUD et le log
-var nom         : String = ""
+# =======================================================
+# IDENTITÉ DU SORT
+# =======================================================
 
-# Dégâts infligés (avant bonus du lanceur)
-var degats      : int    = 0
+# Identifiant unique — utilisé pour le dispatch dans sort_handler
+# Format : "classe_nom" (ex: "guerrier_mur", "mage_gel")
+var id           : String = ""
 
-# Portée en cases (distance Manhattan)
-# 0 = portée illimitée ou auto-ciblage (ex: Rage, Lame)
-var portee      : int    = 0
+# Nom affiché dans le HUD et le log de combat
+var nom          : String = ""
 
-# Nombre de tours de cooldown après utilisation
-var cooldown_max    : int = 0
-
-# Tours de cooldown restants (0 = disponible)
-var cooldown_actuel : int = 0
-
-# Coût en Gold pour utiliser le sort
-var cout_gold   : int    = 0
-
-# Coût en PM pour utiliser le sort
-var cout_pm     : int    = 0
-
-# Indique si une ligne de vue est requise pour cibler
-var ligne_de_vue : bool  = false
-
-# Description affichée dans l'interface
+# Description courte affichée dans le HUD sous le nom
 var description  : String = ""
 
 
 # =======================================================
-# ÉTAT DU COOLDOWN
+# STATS DU SORT
+# =======================================================
+
+# Dégâts bruts avant le bonus du lanceur (bonus_degats_sorts)
+var degats       : int  = 0
+
+# Portée maximale en cases (distance Manhattan)
+# Cas spéciaux :
+#   0 = portée illimitée (Tempête Arcanique)
+#   0 = auto-ciblage sur soi-même (Rage, Lame Empoisonnée, Frénésie)
+var portee       : int  = 0
+
+# true = une case MUR ou VIDE entre le lanceur et la cible bloque le sort
+# Vérifié via sort_handler._a_ligne_de_vue() (algorithme de Bresenham)
+var ligne_de_vue : bool = false
+
+
+# =======================================================
+# COÛTS D'UTILISATION
+# =======================================================
+
+# PM déduits immédiatement à l'utilisation
+var cout_pm      : int = 0
+
+# Gold déduit immédiatement à l'utilisation
+# Certains sorts ont un coût variable (Tempête Arcanique, Tir Ciblé)
+# géré manuellement dans sort_handler avant _consommer_ressources()
+var cout_gold    : int = 0
+
+
+# =======================================================
+# COOLDOWN
+# -------------------------------------------------------
+# Après utilisation, cooldown_actuel = cooldown_max.
+# Décrémenté de 1 par tour dans joueur.debut_tour().
+# Sort disponible quand cooldown_actuel = 0.
+# =======================================================
+
+# Nombre de tours de cooldown après utilisation
+var cooldown_max    : int = 0
+
+# Tours de cooldown restants — 0 = disponible, > 0 = en recharge
+var cooldown_actuel : int = 0
+
+
+# =======================================================
+# API PUBLIQUE — Cooldown
 # =======================================================
 
 # -------------------------------------------------------
@@ -55,14 +87,16 @@ func est_disponible() -> bool:
 
 
 # -------------------------------------------------------
-# Déclenche le cooldown après utilisation
+# Lance le cooldown — appelée par sort_handler._consommer_ressources()
+# immédiatement après chaque utilisation réussie
 # -------------------------------------------------------
 func declencher_cooldown() -> void:
 	cooldown_actuel = cooldown_max
 
 
 # -------------------------------------------------------
-# Réduit le cooldown d'un tour (appelé dans debut_tour)
+# Réduit le cooldown d'un tour
+# Appelée dans joueur.debut_tour() sur tous les sorts du joueur actif
 # -------------------------------------------------------
 func reduire_cooldown() -> void:
 	if cooldown_actuel > 0:
@@ -72,8 +106,9 @@ func reduire_cooldown() -> void:
 # =======================================================
 # CONSTRUCTEUR STATIQUE
 # -------------------------------------------------------
-# Utilisé par tous les xxx_sorts.gd pour créer les sorts.
-# Centralise la création pour éviter l'oubli de champs.
+# Seul moyen de créer un sort — utilisé dans tous les xxx_sorts.gd.
+# L'ordre des paramètres suit la logique de lecture d'un sort :
+# identité → combat → cooldown → coûts → contraintes
 # =======================================================
 static func creer(
 	p_id          : String,
