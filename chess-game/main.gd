@@ -23,6 +23,11 @@ var laves_temporaires: Array = []
 var pieges_actifs: Array = []
 var forets_temporaires: Array = []
 
+var boutique_ouverte: bool = false
+
+var bombe_en_attente: Resource = null
+
+var cape_en_attente: Resource = null
 # -----------------------------------------------
 func _ready():
 	# --- Plateau ---
@@ -61,6 +66,10 @@ func _ready():
 	shop_ui.boutique_fermee.connect(_on_boutique_fermee)
 	shop_ui.shop_manager = shop_manager
 	tour_manager.tour_global_termine.connect(_on_tour_global_termine)
+	inventory_ui.bombe_demande_cible.connect(_on_bombe_demande_cible)
+	inventory_ui.bandage_utilise.connect(_on_bandage_utilise)
+	inventory_ui.fleches_utilisees.connect(_on_fleches_utilisees)
+	inventory_ui.cape_utilisee.connect(_on_cape_utilisee)
 
 	# --- HUD : maintenant que tout est initialisé, on peut rafraîchir ---
 	hud_ui.rafraichir([joueur1, joueur2, joueur3], tour_manager.get_joueur_actif())
@@ -103,6 +112,7 @@ func _rafraichir_hud():
 # Boutique
 # -----------------------------------------------
 func _on_phase_boutique(_numero_tour: int):
+	boutique_ouverte = true     
 	index_joueur_boutique = 0
 	shop_manager.ouvrir_boutique()
 	bouton_fin_tour.disabled = true
@@ -114,18 +124,31 @@ func _on_boutique_fermee():
 	if index_joueur_boutique < joueurs_liste.size():
 		shop_ui.ouvrir(joueurs_liste[index_joueur_boutique])
 	else:
+		boutique_ouverte = false
 		bouton_fin_tour.disabled = false
 		print("=== Phase boutique terminée — La partie reprend ===")
+
 
 # -----------------------------------------------
 # Gestion des inputs
 # -----------------------------------------------
 func _input(event):
-	
+	# -----------------------------------------------
+	# Touche F — ouvre/ferme l'inventaire
+	# Autorisé même pendant la boutique
+	# -----------------------------------------------
 	if event is InputEventKey and event.pressed:
 		if event.keycode == KEY_F:
 			inventory_ui.toggle(tour_manager.get_joueur_actif())
 			return
+
+	# -----------------------------------------------
+	# Boutique ouverte — bloque TOUS les autres inputs
+	# -----------------------------------------------
+	if boutique_ouverte:
+		return
+
+	if event is InputEventKey and event.pressed:
 		var joueur_actif = tour_manager.get_joueur_actif()
 		if not joueur_selectionne:
 			return
@@ -183,7 +206,58 @@ func _input(event):
 				renderer.sort_selectionne = -1
 				renderer.queue_redraw()
 			return
-
+	# -----------------------------------------------
+		# MODE CIBLAGE BOMBE — prioritaire sur tout le reste
+		# Si une bombe est en attente, le prochain clic
+		# sur le plateau déclenche l'explosion en zone 3x3
+		# -----------------------------------------------
+		if bombe_en_attente != null:
+			joueur_actif = tour_manager.get_joueur_actif()
+			for j in [joueur1, joueur2, joueur3]:
+				if not j.est_place or j.est_mort:
+					continue
+				# Zone 3x3 autour du clic (rayon 1)
+				if abs(j.grid_x - cell.x) + abs(j.grid_y - cell.y) <= 1:
+					j.recevoir_degats(20)
+					joueur_actif.gagner_gold_sur_degats(20)
+					print("💣 Bombe ! 20 dmg sur ", j.name)
+			# Retire la bombe de l'inventaire (consommée)
+			joueur_actif.inventaire.erase(bombe_en_attente)
+			bombe_en_attente = null
+			_log("💣 " + joueur_actif.name + " — Bombe lancée !", joueur_actif)
+			_rafraichir_hud()
+			renderer.queue_redraw()
+			return
+			
+			# -----------------------------------------------
+			# CAPE DE FORÊT — crée une case Forêt à l'endroit cliqué
+			# -----------------------------------------------
+		if cape_en_attente != null:
+			joueur_actif = tour_manager.get_joueur_actif()
+			var type_case = board.get_case(cell.x, cell.y)
+			# Ne peut pas transformer VIDE ou MUR
+			if type_case == board.CaseType.VIDE or type_case == board.CaseType.MUR:
+				print("🌲 Cape : impossible sur VIDE/MUR !")
+				cape_en_attente = null
+				return
+			# Transforme la case en Forêt et l'enregistre comme temporaire
+			board.plateau[cell.x][cell.y] = board.CaseType.FORET
+			forets_temporaires.append({
+				"cases": [{"x": cell.x, "y": cell.y, "type_original": type_case}],
+				"tours_restants": 2,
+				"lanceur": joueur_actif
+			})
+			# Consomme 1 charge
+			joueur_actif.cape_foret_charges -= 1
+			# Si plus de charges → retire l'item de l'inventaire
+			if joueur_actif.cape_foret_charges <= 0:
+				joueur_actif.inventaire.erase(cape_en_attente)
+			cape_en_attente = null
+			_log("🌲 " + joueur_actif.name + " — Cape de Forêt ! Case (" + str(cell.x) + "," + str(cell.y) + ") → Forêt", joueur_actif)
+			_rafraichir_hud()
+			renderer.queue_redraw()
+			return
+			
 		if not joueur_actif.est_place:
 			if not board.case_occupee(cell.x, cell.y):
 				board.occuper_case(cell.x, cell.y)
@@ -237,21 +311,27 @@ func _input(event):
 				var cible = _get_joueur_en(cell.x, cell.y)
 				if joueur_actif.peut_attaquer(cell.x, cell.y):
 					joueur_actif.attaquer(cible)
-					# ← Flèches Empoisonnées (Archer)
-				if joueur_actif.fleches_empoisonnees_actif:
-					cible.ajouter_dot("fleches_empoisonnees", 5, 3)
-					joueur_actif.fleches_empoisonnees_actif = false
-					_log("🏹 Flèches Empoisonnées ! DoT appliqué sur " + cible.name, joueur_actif)
 
-				# ← Ceinture de Pickpocket (Fripon)
-				if joueur_actif.pickpocket_actif and cible.gold > 0:
-					cible.gold         -= 1
-					joueur_actif.gold  += 1
-					_log("👜 " + joueur_actif.name + " vole 1 Gold à " + cible.name + " !", joueur_actif)
-	
+					# ← Flèches Empoisonnées (Archer)
+					# S'applique sur la cible si l'état est actif
+					if joueur_actif.fleches_empoisonnees_actif:
+						cible.ajouter_dot("fleches_empoisonnees", 5, 3)
+						joueur_actif.fleches_empoisonnees_actif = false
+						_log("🏹 Flèches Empoisonnées ! DoT appliqué sur " + cible.name, joueur_actif)
+
+					# ← Ceinture de Pickpocket (Fripon)
+					# Vole 1 Gold si la cible en a
+					if joueur_actif.pickpocket_actif and cible.gold > 0:
+						cible.gold -= 1
+						joueur_actif.gold += 1
+						_log("👜 " + joueur_actif.name + " vole 1 Gold à " + cible.name + " !", joueur_actif)
+
+					# ← Log attaque + rafraîchissement HUD
+					# Toujours exécutés après une attaque réussie
 					_log("⚔️ " + joueur_actif.name + " attaque " + cible.name + " — " + str(joueur_actif.attaque_degats) + " dmg", joueur_actif)
 					_rafraichir_hud()
 					joueur_selectionne = false
+
 				else:
 					if joueur_actif.a_attaque_ce_tour:
 						print("Déjà attaqué ce tour !")
@@ -284,9 +364,8 @@ func _input(event):
 					joueur_actif.deplacer(cell.x, cell.y, cout)
 					# Passif Fripon : le déplacement reset a_attaque_ce_tour
 					# → le Fripon peut réattaquer après s'être déplacé
-					if joueur_actif.has_method("attaquer") and joueur_actif.get_script() != null:
-						if joueur_actif.get("ruee_disponible") != null:  # C'est un Fripon
-							joueur_actif.a_attaque_ce_tour = false
+					if "fripon" in joueur_actif.get_script().resource_path:
+						joueur_actif.a_attaque_ce_tour = false
 					if joueur_actif.get("s_est_deplace_ce_tour") != null:
 						joueur_actif.s_est_deplace_ce_tour = true
 					_appliquer_effet_case(joueur_actif)
@@ -599,10 +678,6 @@ func _utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) ->
 			_rafraichir_hud()
 			return true
 		"mage_tempete":
-			print("DEBUG Tempête — cout_gold: ", sort.cout_gold,
-		  " | reduction: ", joueur.reduction_cout_tempete,
-		  " | cout_final: ", max(0, sort.cout_gold - joueur.reduction_cout_tempete),
-		  " | gold joueur: ", joueur.gold)
 			var cout_tempete = max(0, sort.cout_gold - joueur.reduction_cout_tempete)
 			if joueur.gold < cout_tempete:
 				print("Pas assez de Gold pour Tempête !")
@@ -737,7 +812,13 @@ func _utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) ->
 			if joueur.gold < sort.cout_gold:
 				print("Pas assez de Gold !")
 				return false
-
+			else:
+				# Case libre — vérifie que ce n'est pas VIDE ou MUR
+				var type_case = board.get_case(cible_x, cible_y)
+				if type_case == board.CaseType.VIDE or type_case == board.CaseType.MUR:
+					print("Ruée : impossible sur une case VIDE ou MUR !")
+					return false
+					
 			# Si cible ennemie → repositionnement autour + 5 dmg
 			# Si case libre (cible == null) → téléport DIRECT sur la case cliquée
 			var case_arrivee: Vector2i
@@ -817,7 +898,7 @@ func _utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) ->
 			if joueur.gold < cout_frenesie:
 				print("Pas assez de Gold !")
 				return false
-			joueur.gold       -= sort.cout_gold
+			joueur.gold -= cout_frenesie
 			joueur.pm_actuels -= sort.cout_pm
 			sort.declencher_cooldown()
 			joueur.frenesie_active = true
@@ -1042,7 +1123,6 @@ func _on_joueur_mort(joueur: Node):
 	_log("💀 " + joueur.name + " est éliminé !")  # blanc = système
 	renderer.queue_redraw()
 
-
 # -----------------------------------------------
 # Callbacks événements
 # -----------------------------------------------
@@ -1081,3 +1161,51 @@ func _on_coffre_ramasse(joueur: Node, gold: int):
 	_log("💎 " + joueur.name + " ouvre le coffre ! +" + str(gold) + " Gold", joueur)
 	_rafraichir_hud()
 	renderer.queue_redraw()
+
+func _on_bombe_demande_cible(item: Resource):
+	bombe_en_attente = item
+	# Optionnel : afficher un message dans le log
+	_log("💣 " + tour_manager.get_joueur_actif().name + " — Clique une case pour lancer la Bombe !", null)
+
+
+# -----------------------------------------------
+# Bandage — réduit tous les DoT actifs de 1 tour
+# Appelée depuis inventory_ui quand le joueur clique "Utiliser"
+# -----------------------------------------------
+func _on_bandage_utilise(item: Resource):
+	var joueur_actif = tour_manager.get_joueur_actif()
+
+	# Réduit chaque DoT de 1 tour
+	for source_id in joueur_actif.dots_actifs:
+		joueur_actif.dots_actifs[source_id]["tours_restants"] -= 1
+
+	# Supprime les DoT expirés (tours_restants <= 0)
+	var a_supprimer = []
+	for source_id in joueur_actif.dots_actifs:
+		if joueur_actif.dots_actifs[source_id]["tours_restants"] <= 0:
+			a_supprimer.append(source_id)
+	for s in a_supprimer:
+		joueur_actif.dots_actifs.erase(s)
+
+	# Retire le Bandage de l'inventaire (consommé)
+	joueur_actif.inventaire.erase(item)
+
+	_log("🩹 " + joueur_actif.name + " utilise un Bandage — DoT réduits !", joueur_actif)
+	_rafraichir_hud()
+	print("🩹 Bandage — ", a_supprimer.size(), " DoT(s) supprimé(s)")
+
+func _on_fleches_utilisees(item: Resource):
+	var joueur_actif = tour_manager.get_joueur_actif()
+	joueur_actif.fleches_empoisonnees_actif = true
+	# Retire l'item de l'inventaire (consommé à l'activation)
+	joueur_actif.inventaire.erase(item)
+	_log("🏹 " + joueur_actif.name + " — Flèches Empoisonnées activées !", joueur_actif)
+	_rafraichir_hud()
+
+func _on_cape_utilisee(item: Resource):
+	var joueur_actif = tour_manager.get_joueur_actif()
+	if joueur_actif.cape_foret_charges <= 0:
+		print("Cape de Forêt : plus de charges !")
+		return
+	cape_en_attente = item
+	_log("🌲 " + joueur_actif.name + " — Clique une case pour créer une Forêt !", null)

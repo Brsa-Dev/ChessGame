@@ -128,17 +128,7 @@ func appliquer_effet(joueur: Node, item: Resource):
 					break
 
 		"bandage":
-			# Réduit TOUS les DoT actifs de 1 tour
-			for source_id in joueur.dots_actifs:
-				joueur.dots_actifs[source_id]["tours_restants"] -= 1
-			# Supprime les DoT expirés
-			var a_supprimer = []
-			for source_id in joueur.dots_actifs:
-				if joueur.dots_actifs[source_id]["tours_restants"] <= 0:
-					a_supprimer.append(source_id)
-			for s in a_supprimer:
-				joueur.dots_actifs.erase(s)
-			print("🩹 Bandage — DoT réduits de 1 tour")
+				print("🩹 Bandage ajouté à l'inventaire — à utiliser manuellement")
 
 		# -----------------------------------------------
 		# ITEMS MAGE
@@ -173,17 +163,17 @@ func appliquer_effet(joueur: Node, item: Resource):
 			print("🏹 Arc Long — portée : ", joueur.attaque_portee)
 
 		"fleches_empoisonnees":
-			# Active l'état — la prochaine attaque de base appliquera un DoT
-			joueur.fleches_empoisonnees_actif = true
-			print("🏹 Flèches Empoisonnées activées")
+			# Ajoutées à l'inventaire — activables manuellement via touche F
+			print("🏹 Flèches Empoisonnées ajoutées à l'inventaire")
 
 		"piege_ameliore":
 			joueur.piege_ameliore_actif = true
 			print("🪤 Piège Amélioré — immobilisation 2 tours")
 
 		"cape_foret":
-			joueur.cape_foret_charges += 2
-			print("🌲 Cape de Forêt — 2 charges")
+			joueur.cape_foret_charges = 2   # ← initialise les 2 charges à l'achat
+			print("🌲 Cape de Forêt — 2 charges disponibles")
+			# NE PAS incrémenter cape_foret_charges ici
 
 		# -----------------------------------------------
 		# ITEMS FRIPON

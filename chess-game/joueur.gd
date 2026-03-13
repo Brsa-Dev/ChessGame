@@ -70,9 +70,6 @@ var dots_actifs: Dictionary = {}
 # Nombre de tours où le joueur est immobilisé (Gel)
 var tours_immobilise: int = 0
 
-# Sorts en attente d'exécution différée
-# Format : [{ "id": "mage_meteore", "cible_x": 3, "cible_y": 4, "tours_restants": 2, "lanceur": joueur }]
-var sorts_en_attente: Array = []
 
 # Cible marquée par la Dérobade du Fripon
 # null = pas de marque active
@@ -211,16 +208,6 @@ func appliquer_dots():
 # -----------------------------------------------
 # Ajoute un sort en attente (ex: Météore)
 # -----------------------------------------------
-func ajouter_sort_en_attente(sort_id: String, cible_x: int, cible_y: int, delai: int, lanceur: Node):
-	sorts_en_attente.append({
-		"id": sort_id,
-		"cible_x": cible_x,
-		"cible_y": cible_y,
-		"tours_restants": delai,
-		"lanceur": lanceur
-	})
-	print("⏳ Sort en attente : ", sort_id, " — impact dans ", delai, " tours")
-		
 		
 # -----------------------------------------------
 # Méthode centralisée pour gagner du Gold
@@ -251,18 +238,6 @@ func debut_tour():
 		tours_immobilise -= 1
 		print("❄️ Immobilisé encore ", tours_immobilise, " tour(s)")
 	# Réduit le délai des sorts en attente
-	_reduire_sorts_en_attente()
-
-func _reduire_sorts_en_attente() -> Array:
-	var prets = []
-	for sort_attente in sorts_en_attente:
-		sort_attente["tours_restants"] -= 1
-		if sort_attente["tours_restants"] <= 0:
-			prets.append(sort_attente)
-	# Retire les sorts prêts de la liste d'attente
-	for sort_attente in prets:
-		sorts_en_attente.erase(sort_attente)
-	return prets
 	
 # -----------------------------------------------
 # Overridé dans chaque classe fille

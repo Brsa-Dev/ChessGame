@@ -13,6 +13,10 @@ var _panel: PanelContainer = null
 var _vbox: VBoxContainer = null
 var _visible: bool = false
 
+signal bombe_demande_cible(item) 
+signal bandage_utilise(item) 
+signal fleches_utilisees(item)
+signal cape_utilisee(item)
 # -----------------------------------------------
 # _ready — Construit l'UI en code
 # -----------------------------------------------
@@ -64,35 +68,98 @@ func _rafraichir():
 	if joueur_actif == null:
 		return
 
-	# Affiche chaque item de l'inventaire
 	if joueur_actif.inventaire.is_empty():
 		var label_vide = Label.new()
 		label_vide.text = "Inventaire vide"
 		label_vide.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 		label_vide.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_vbox.add_child(label_vide)
-		return
+	else:
+		for item in joueur_actif.inventaire:
+			var hbox = HBoxContainer.new()
 
-	for item in joueur_actif.inventaire:
-		var rtl = RichTextLabel.new()
-		rtl.bbcode_enabled = true
-		rtl.fit_content = true
-		rtl.custom_minimum_size = Vector2(380, 0)
+			# Label nom + description
+			var rtl = RichTextLabel.new()
+			rtl.bbcode_enabled = true
+			rtl.fit_content = true
+			rtl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			rtl.custom_minimum_size = Vector2(280, 0)
+			var couleur = "#ffffff"
+			match item.classe_requise:
+				"guerrier": couleur = "#ff6644"
+				"mage":     couleur = "#aa66ff"
+				"archer":   couleur = "#44ff88"
+				"fripon":   couleur = "#ffdd44"
+			rtl.text = "[color=" + couleur + "][b]" + item.nom + "[/b][/color]"
+			rtl.text += "  [color=#888888]" + item.description + "[/color]"
+			hbox.add_child(rtl)
 
-		# Couleur selon la classe de l'item
-		var couleur = "#ffffff"
-		match item.classe_requise:
-			"guerrier": couleur = "#ff6644"
-			"mage":     couleur = "#aa66ff"
-			"archer":   couleur = "#44ff88"
-			"fripon":   couleur = "#ffdd44"
+			# Bouton "Utiliser" uniquement pour les items UNIQUE utilisables manuellement
+			# Actuellement : seulement la Bombe (les autres UNIQUE s'appliquent à l'achat)
+			if item.id == "bombe":
+				var btn = Button.new()
+				btn.text = "💣 Lancer"
+				btn.custom_minimum_size = Vector2(90, 0)
+				# On émet un signal vers main.gd pour déclencher le mode ciblage
+				btn.pressed.connect(func(): _demander_cible_bombe(item))
+				hbox.add_child(btn)
+				
+			elif item.id == "bandage":
+				var btn = Button.new()
+				btn.text = "🩹 Utiliser"
+				btn.custom_minimum_size = Vector2(90, 0)
+				# Pas besoin de ciblage — s'applique immédiatement sur le joueur actif
+				btn.pressed.connect(func(): _utiliser_bandage(item))
+				hbox.add_child(btn)
+				
+			elif item.id == "fleches_empoisonnees":
+				var btn = Button.new()
+				btn.text = "🏹 Activer"
+				btn.custom_minimum_size = Vector2(90, 0)
+				btn.pressed.connect(func(): _utiliser_fleches(item))
+				hbox.add_child(btn)
 
-		rtl.text = "[color=" + couleur + "][b]" + item.nom + "[/b][/color]"
-		rtl.text += "  [color=#888888]" + item.description + "[/color]"
-		_vbox.add_child(rtl)
+			elif item.id == "cape_foret":
+				var btn = Button.new()
+				# Affiche les charges restantes sur le bouton
+				var charges = joueur_actif.cape_foret_charges
+				btn.text = "🌲 Utiliser (%d)" % charges
+				btn.custom_minimum_size = Vector2(100, 0)
+				# Grisé si plus de charges
+				btn.disabled = (charges <= 0)
+				btn.pressed.connect(func(): _utiliser_cape(item))
+				hbox.add_child(btn)
+			_vbox.add_child(hbox)
 
 	# Bouton fermer
 	var btn_fermer = Button.new()
 	btn_fermer.text = "Fermer"
 	btn_fermer.pressed.connect(func(): _panel.visible = false; _visible = false)
 	_vbox.add_child(btn_fermer)
+	
+
+
+func _demander_cible_bombe(item: Resource):
+	# Ferme l'inventaire et passe en mode ciblage bombe
+	_panel.visible = false
+	_visible = false
+	emit_signal("bombe_demande_cible", item)
+	print("💣 Mode ciblage Bombe activé — clique sur une case !")
+
+func _utiliser_bandage(item: Resource):
+	_panel.visible = false
+	_visible = false
+	emit_signal("bandage_utilise", item)
+	print("🩹 Bandage utilisé !")
+
+func _utiliser_fleches(item: Resource):
+	_panel.visible = false
+	_visible = false
+	emit_signal("fleches_utilisees", item)
+	print("🏹 Flèches Empoisonnées activées !")
+
+func _utiliser_cape(item: Resource):
+	_panel.visible = false
+	_visible = false
+	emit_signal("cape_utilisee", item)
+	print("🌲 Cape de Forêt — ciblage activé !")
