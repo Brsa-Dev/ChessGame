@@ -12,8 +12,8 @@ var grid_x: int = 0
 var grid_y: int = 0
 var est_place: bool = false
 
-var pm_max: int = 5
-var pm_actuels: int = 5
+var pm_max: int = 10
+var pm_actuels: int = 10
 
 var hp_max: int = 100
 var hp_actuels: int = 100
@@ -68,6 +68,11 @@ var tours_immobilise: int = 0
 # Sorts en attente d'exécution différée
 # Format : [{ "id": "mage_meteore", "cible_x": 3, "cible_y": 4, "tours_restants": 2, "lanceur": joueur }]
 var sorts_en_attente: Array = []
+
+# Cible marquée par la Dérobade du Fripon
+# null = pas de marque active
+var marque_cible: Node = null
+var marque_tours_restants: int = 0  # Expiration après 3 tours
 
 # -----------------------------------------------
 # Place le joueur sur une case de la grille

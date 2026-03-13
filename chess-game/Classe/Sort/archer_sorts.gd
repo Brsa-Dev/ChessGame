@@ -9,18 +9,24 @@ static func creer_sorts() -> Array:
 	return [
 		# Sort 1 — Flèche Rebondissante (touche A)
 		# Agit comme une attaque de base (déclenche a_attaque_ce_tour)
-		# Dévastateur en forêt grâce au passif (+1 range, +10 atk)
-		# CD court mais coût PM élevé pour compenser la portée 5
+		# Dévastateur en forêt grâce au passif :
+		#   → attaque_portee passe de 3 à 4 via entrer_foret()
+		#   → attaque_degats passe de 20 à 30 via entrer_foret()
+		# La portée réelle est toujours lue depuis joueur.attaque_portee
+		# dans main.gd (_utiliser_sort) et renderer.gd (_dessiner_cases_sort)
+		# Rebond : cherche un ennemi dans un rayon de 2 cases autour de
+		# la cible initiale, annulé si pas de ligne de vue
 		SortScript.creer(
 			"archer_fleche",
 			"Flèche Rebondissante",
-			20,    # 20 dégâts
-			5,     # Portée 5
-			1,     # CD 1 tour
+			20,    # 20 dégâts de base (30 en forêt via passif +10 attaque)
+			3,     # Portée 3 de base (4 en forêt via attaque_portee +1)
+			2,     # CD 2 tours  ← CORRECTION (était 1)
 			0,     # Pas de coût gold
-			3,     # 3 PM — cher car même comportement qu'une attaque de base
-			false, # Pas de ligne de vue
-			"20 dmg + rebond (10 dmg) sur l'ennemi le plus proche si ligne de vue"		),
+			3,     # 3 PM — coût identique à une attaque de base + rebond bonus
+			false, # Pas de ligne de vue pour le TIR INITIAL
+			"20 dmg (30 forêt) + rebond rayon 2 cases (10/15 dmg) si ligne de vue"
+		),
 		# Sort 2 — Piège (touche Z)
 		# Pose un piège INVISIBLE sur une case vide
 		# Déclenché quand un ennemi marche dessus : 10 dmg + immobilisé 1 tour
