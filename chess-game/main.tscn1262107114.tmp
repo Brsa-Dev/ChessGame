@@ -1,0 +1,73 @@
+[gd_scene format=3 uid="uid://l41k4m2kd4oq"]
+
+[ext_resource type="Script" uid="uid://bogw5eycnqb0q" path="res://main.gd" id="1_ig7tw"]
+[ext_resource type="Script" uid="uid://cx5ap1rwg6fkk" path="res://board.gd" id="2_0xm2m"]
+[ext_resource type="Script" uid="uid://d1c4gj8rey8gb" path="res://renderer.gd" id="3_h2yge"]
+[ext_resource type="Script" uid="uid://vx764si80mid" path="res://Classe/archer.gd" id="4_5vw27"]
+[ext_resource type="Script" uid="uid://ylfkw30jteip" path="res://Classe/fripon.gd" id="4_kek77"]
+[ext_resource type="Script" uid="uid://dd545mykmfl8k" path="res://Classe/mage.gd" id="5_kek77"]
+[ext_resource type="Script" uid="uid://dwdhc37i2tort" path="res://tour_manager.gd" id="5_lquwl"]
+[ext_resource type="Script" uid="uid://gmarcgm6a54i" path="res://shop_manager.gd" id="6_272bh"]
+[ext_resource type="PackedScene" uid="uid://mbe0rw1qqi34" path="res://shop_ui.tscn" id="7_5vw27"]
+[ext_resource type="PackedScene" uid="uid://dsa25x38tnxyk" path="res://log_ui.tscn" id="8_4c57u"]
+[ext_resource type="Script" uid="uid://btmxatp242gy4" path="res://hud_ui.gd" id="11_efxa6"]
+
+[node name="Main" type="Node2D" unique_id=572728295]
+script = ExtResource("1_ig7tw")
+
+[node name="Board" type="Node" parent="." unique_id=909297872]
+script = ExtResource("2_0xm2m")
+
+[node name="Renderer" type="Node2D" parent="." unique_id=367535539]
+script = ExtResource("3_h2yge")
+
+[node name="Joueur1" type="Node" parent="." unique_id=754179848]
+script = ExtResource("4_kek77")
+
+[node name="Joueur2" type="Node" parent="." unique_id=1933811520]
+script = ExtResource("5_kek77")
+
+[node name="Joueur3" type="Node" parent="." unique_id=964493188]
+script = ExtResource("4_5vw27")
+
+[node name="TourManager" type="Node" parent="." unique_id=313856146]
+script = ExtResource("5_lquwl")
+
+[node name="Timer" type="Timer" parent="TourManager" unique_id=1992702120]
+wait_time = 150.0
+one_shot = true
+
+[node name="UI" type="CanvasLayer" parent="." unique_id=457447921]
+
+[node name="BoutonFinTour" type="Button" parent="UI" unique_id=1024449086]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -92.0
+offset_top = -31.0
+grow_horizontal = 0
+grow_vertical = 0
+text = "Fin de tour"
+
+[node name="LogUI" parent="UI" unique_id=155916075 instance=ExtResource("8_4c57u")]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -280.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 350.0
+grow_horizontal = 0
+
+[node name="ShopManager" type="Node" parent="." unique_id=1214474715]
+script = ExtResource("6_272bh")
+
+[node name="ShopUI" parent="." unique_id=2008567203 instance=ExtResource("7_5vw27")]
+
+[node name="HudUI" type="CanvasLayer" parent="." unique_id=126964788]
+script = ExtResource("11_efxa6")
+
+[connection signal="timeout" from="TourManager/Timer" to="TourManager" method="_on_timer_timeout"]
+[connection signal="pressed" from="UI/BoutonFinTour" to="." method="fin_de_tour"]

@@ -1,63 +1,103 @@
-# Classes/guerrier.gd
+# =======================================================
+# Classe/guerrier.gd
+# -------------------------------------------------------
+# Classe Guerrier — tank corps-à-corps.
+#
+# Spécialités :
+#   - HP élevés (120), dégâts élevés (20), portée 1
+#   - Rage Berserker : x2 attaque + immunité dégâts pendant 2 tours
+#   - Override debut_tour() → décrémente la Rage
+# =======================================================
 extends "res://joueur.gd"
 
-# True si la Rage Berserker est active
-var rage_active: bool = false
-# Compteur de tours restants pour la Rage
-var tours_rage_restants: int = 0
 
-func _ready():
-	hp_max = 120
-	hp_actuels = 120
-	attaque_degats = 20
-	attaque_portee = 1
-	attaque_cout_pm = 1
-	
-	# Charge les sorts depuis guerrier_sorts.gd
+# =======================================================
+# CONSTANTES — Stats de base
+# =======================================================
+
+const GUERRIER_HP_MAX         : int = 120
+const GUERRIER_ATTAQUE_DEGATS : int = 20
+const GUERRIER_ATTAQUE_PORTEE : int = 1
+const GUERRIER_COUT_PM        : int = 1
+
+
+# =======================================================
+# CONSTANTES — Rage Berserker
+# =======================================================
+
+const RAGE_MULTIPLICATEUR_ATTAQUE : int = 2  # x2 dégâts pendant la Rage
+const RAGE_BONUS_PM               : int = 2  # PM supplémentaires au déclenchement
+const RAGE_DUREE_TOURS            : int = 2  # Tours de durée de la Rage
+
+
+# =======================================================
+# ÉTAT — Rage Berserker
+# =======================================================
+
+var rage_active         : bool = false  # true = immunité + x2 attaque
+var tours_rage_restants : int  = 0      # Décrémenté dans debut_tour()
+
+
+# =======================================================
+# INITIALISATION
+# =======================================================
+func _ready() -> void:
+	hp_max          = GUERRIER_HP_MAX
+	hp_actuels      = GUERRIER_HP_MAX
+	attaque_degats  = GUERRIER_ATTAQUE_DEGATS
+	attaque_portee  = GUERRIER_ATTAQUE_PORTEE
+	attaque_cout_pm = GUERRIER_COUT_PM
+
 	const SortsScript = preload("res://Classe/Sort/guerrier_sorts.gd")
 	sorts = SortsScript.creer_sorts()
 
-# -----------------------------------------------
-# Override debut_tour — gère la durée de la Rage
-# -----------------------------------------------
-func debut_tour():
+
+# =======================================================
+# OVERRIDE — Début de tour
+# -------------------------------------------------------
+# Décrémente la Rage si active et désactive quand elle expire.
+# super.debut_tour() gère PM, DoT, immobilisation, et CDs.
+# =======================================================
+func debut_tour() -> void:
 	super.debut_tour()
-	
-	if rage_active:
-		tours_rage_restants -= 1
-		if tours_rage_restants <= 0:
-			# La Rage se termine — on retire les bonus
-			_desactiver_rage()
 
-# -----------------------------------------------
-# Active la Rage Berserker
-# -----------------------------------------------
-func activer_rage():
-	rage_active = true
-	tours_rage_restants = 2
-	attaque_degats *= 2   # x2 attaque
-	pm_max += 2           # +2 PM
-	pm_actuels += 2
-	print("⚔️ Rage Berserker ! x2 attaque, +2 PM — Durée : 2 tours")
+	if not rage_active:
+		return
 
-# -----------------------------------------------
-# Désactive la Rage Berserker (fin de durée)
-# -----------------------------------------------
-func _desactiver_rage():
-	rage_active = false
-	attaque_degats /= 2   # Retire le x2
-	pm_max -= 2           # Retire les +2 PM
-	pm_actuels = min(pm_actuels, pm_max)
+	tours_rage_restants -= 1
+	if tours_rage_restants <= 0:
+		_desactiver_rage()
+
+# =======================================================
+# RAGE BERSERKER
+# =======================================================
+
+# -------------------------------------------------------
+# Active la Rage — appelée par sort_handler quand le sort est utilisé.
+# x2 attaque, +2 PM, immunité aux dégâts pendant RAGE_DUREE_TOURS.
+# -------------------------------------------------------
+func activer_rage() -> void:
+	rage_active         = true
+	tours_rage_restants = RAGE_DUREE_TOURS
+	attaque_degats     *= RAGE_MULTIPLICATEUR_ATTAQUE
+	pm_max             += RAGE_BONUS_PM
+	pm_actuels         += RAGE_BONUS_PM
+	print("⚔️ Rage Berserker ! x%d attaque, +%d PM — %d tours" % [
+		RAGE_MULTIPLICATEUR_ATTAQUE, RAGE_BONUS_PM, RAGE_DUREE_TOURS
+	])
+
+
+# -------------------------------------------------------
+# Désactive la Rage — retire tous les bonus
+# -------------------------------------------------------
+func _desactiver_rage() -> void:
+	rage_active     = false
+	attaque_degats /= RAGE_MULTIPLICATEUR_ATTAQUE
+	pm_max         -= RAGE_BONUS_PM
+	# pm_actuels peut avoir été consommé pendant la Rage — on plafonne
+	pm_actuels      = min(pm_actuels, pm_max)
 	print("⚔️ Rage Berserker terminée")
 
-# -----------------------------------------------
-# Override recevoir_degats — immunité pendant la Rage
-# -----------------------------------------------
-func recevoir_degats(degats: int):
-	if rage_active:
-		print("⚔️ Immunisé ! (Rage Berserker active)")
-		return
-	super.recevoir_degats(degats)
 
-func utiliser_passif():
+func utiliser_passif() -> void:
 	pass

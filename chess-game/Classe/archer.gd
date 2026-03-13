@@ -1,36 +1,91 @@
-# Classes/archer.gd
-# -----------------------------------------------
-# ARCHER — Classe polyvalente / terrain
-# Passif : En forêt → coût 1 PM au lieu de 2
-#          + 1 Range et +10 attaque de base
-# Attaque : 20 dégâts, portée 3, coût 2 PM
-# -----------------------------------------------
+# =======================================================
+# Classe/archer.gd
+# -------------------------------------------------------
+# Classe Archer — mobilité et dégâts à distance.
+#
+# Spécialités :
+#   - Portée d'attaque 3 (4 en forêt grâce au passif)
+#   - Passif Forêt : +1 portée d'attaque sur case Forêt
+#     → entrer_foret() / quitter_foret() appelées par effects_handler
+#   - La Flèche Rebondissante lit attaque_portee (pas sort.portee)
+#     pour bénéficier du bonus Forêt automatiquement
+# =======================================================
 extends "res://joueur.gd"
 
-var est_en_foret: bool = false
 
-func _ready():
-	attaque_degats = 20
-	attaque_portee = 3
-	attaque_cout_pm = 2
-	
-	# Charge les sorts depuis archer_sorts.gd
+# =======================================================
+# CONSTANTES — Stats de base
+# =======================================================
+
+const ARCHER_HP_MAX            : int = 90
+const ARCHER_ATTAQUE_DEGATS    : int = 15
+const ARCHER_ATTAQUE_PORTEE    : int = 3
+const ARCHER_COUT_PM           : int = 1
+
+
+# =======================================================
+# CONSTANTES — Passif Forêt
+# =======================================================
+
+# Bonus de portée d'attaque quand l'Archer est sur une case Forêt
+const ARCHER_PORTEE_FORET_BONUS : int = 1
+
+
+# =======================================================
+# ÉTAT — Passif Forêt
+# =======================================================
+
+# Suivi interne pour éviter d'appliquer/retirer le bonus deux fois
+var est_en_foret : bool = false
+
+
+# =======================================================
+# INITIALISATION
+# =======================================================
+func _ready() -> void:
+	hp_max          = ARCHER_HP_MAX
+	hp_actuels      = ARCHER_HP_MAX
+	attaque_degats  = ARCHER_ATTAQUE_DEGATS
+	attaque_portee  = ARCHER_ATTAQUE_PORTEE
+	attaque_cout_pm = ARCHER_COUT_PM
+
 	const SortsScript = preload("res://Classe/Sort/archer_sorts.gd")
 	sorts = SortsScript.creer_sorts()
 
-func utiliser_passif():
-	pass
 
-func entrer_foret():
-	if not est_en_foret:
-		est_en_foret = true
-		attaque_portee += 1
-		attaque_degats += 10
-		print("🌲 Passif Archer actif ! +1 Range, +10 attaque")
+# =======================================================
+# PASSIF FORÊT
+# -------------------------------------------------------
+# Appelées par effects_handler.appliquer_effet_case()
+# à chaque fois que l'Archer entre ou quitte une case Forêt.
+# =======================================================
 
-func quitter_foret():
+# -------------------------------------------------------
+# Active le bonus de portée — appelée en entrant sur une case Forêt
+# -------------------------------------------------------
+func entrer_foret() -> void:
 	if est_en_foret:
-		est_en_foret = false
-		attaque_portee -= 1
-		attaque_degats -= 10
-		print("🌲 Passif Archer désactivé")
+		return  # Déjà actif — pas de double application
+	est_en_foret    = true
+	attaque_portee += ARCHER_PORTEE_FORET_BONUS
+	print("🌲 %s — Passif Forêt : portée %d→%d" % [
+		name,
+		attaque_portee - ARCHER_PORTEE_FORET_BONUS,
+		attaque_portee
+	])
+
+
+# -------------------------------------------------------
+# Retire le bonus de portée — appelée en quittant une case Forêt
+# -------------------------------------------------------
+func quitter_foret() -> void:
+	if not est_en_foret:
+		return  # Pas actif — rien à retirer
+	est_en_foret    = false
+	attaque_portee -= ARCHER_PORTEE_FORET_BONUS
+	attaque_portee  = max(1, attaque_portee)  # Portée minimum 1 (sécurité)
+	print("🍂 %s — Passif Forêt désactivé" % name)
+
+
+func utiliser_passif() -> void:
+	pass

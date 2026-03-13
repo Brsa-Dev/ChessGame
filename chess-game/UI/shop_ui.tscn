@@ -1,13 +1,22 @@
 [gd_scene format=3 uid="uid://mbe0rw1qqi34"]
 
-[ext_resource type="Script" uid="uid://dgvbq33mtqbko" path="res://shop_ui.gd" id="1_fscwk"]
+[ext_resource type="Script" uid="uid://dgvbq33mtqbko" path="res://UI/shop_ui.gd" id="1_fscwk"]
 
 [node name="ShopUI" type="CanvasLayer" unique_id=2008567203]
 script = ExtResource("1_fscwk")
 
 [node name="Panneau" type="PanelContainer" parent="." unique_id=897021197]
-offset_right = 40.0
-offset_bottom = 40.0
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -75.5
+offset_top = -44.5
+offset_right = 75.5
+offset_bottom = 44.5
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="Panneau" unique_id=895329842]
 layout_mode = 2
