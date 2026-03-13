@@ -1,0 +1,21 @@
+[gd_scene format=3 uid="uid://dsa25x38tnxyk"]
+
+[ext_resource type="Script" uid="uid://6erbea1woia6" path="res://log_ui.gd" id="1_orixs"]
+
+[node name="LogUI" type="PanelContainer" unique_id=155916075]
+offset_left = 10.0
+offset_top = 10.0
+offset_right = 290.0
+offset_bottom = 360.0
+script = ExtResource("1_orixs")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1762505548]
+layout_mode = 2
+
+[node name="Titre" type="Label" parent="VBoxContainer" unique_id=120559792]
+layout_mode = 2
+text = "📜 Historique"
+horizontal_alignment = 1
+
+[node name="Message" type="VBoxContainer" parent="VBoxContainer" unique_id=1413889972]
+layout_mode = 2

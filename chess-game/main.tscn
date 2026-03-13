@@ -9,6 +9,7 @@
 [ext_resource type="Script" uid="uid://dwdhc37i2tort" path="res://tour_manager.gd" id="5_lquwl"]
 [ext_resource type="Script" uid="uid://gmarcgm6a54i" path="res://shop_manager.gd" id="6_272bh"]
 [ext_resource type="PackedScene" uid="uid://mbe0rw1qqi34" path="res://shop_ui.tscn" id="7_5vw27"]
+[ext_resource type="PackedScene" uid="uid://dsa25x38tnxyk" path="res://log_ui.tscn" id="8_4c57u"]
 
 [node name="Main" type="Node2D" unique_id=572728295]
 script = ExtResource("1_ig7tw")
@@ -48,6 +49,8 @@ offset_top = -31.0
 grow_horizontal = 0
 grow_vertical = 0
 text = "Fin de tour"
+
+[node name="LogUI" parent="UI" unique_id=155916075 instance=ExtResource("8_4c57u")]
 
 [node name="ShopManager" type="Node" parent="." unique_id=1214474715]
 script = ExtResource("6_272bh")
