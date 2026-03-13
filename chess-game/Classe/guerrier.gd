@@ -6,7 +6,6 @@
 # Spécialités :
 #   - HP élevés (120), dégâts élevés (20), portée 1
 #   - Rage Berserker : x2 attaque + immunité dégâts pendant 2 tours
-#   - Override recevoir_degats() → immunité totale pendant la Rage
 #   - Override debut_tour() → décrémente la Rage
 # =======================================================
 extends "res://joueur.gd"
@@ -68,19 +67,6 @@ func debut_tour() -> void:
 	tours_rage_restants -= 1
 	if tours_rage_restants <= 0:
 		_desactiver_rage()
-
-
-# =======================================================
-# OVERRIDE — Réception de dégâts
-# -------------------------------------------------------
-# Immunité totale pendant la Rage — aucun dégât passé.
-# =======================================================
-func recevoir_degats(degats: int) -> void:
-	if rage_active:
-		print("⚔️ %s — Immunisé ! (Rage active)" % name)
-		return
-	super.recevoir_degats(degats)
-
 
 # =======================================================
 # RAGE BERSERKER

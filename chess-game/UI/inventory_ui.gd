@@ -24,7 +24,7 @@ signal bombe_demande_cible(item: Resource)    # Active le mode ciblage bombe
 signal bandage_utilise(item: Resource)        # Applique le bandage immédiatement
 signal fleches_utilisees(item: Resource)      # Active le flag flèches empoisonnées
 signal cape_utilisee(item: Resource)          # Active le mode ciblage cape de forêt
-
+signal potion_utilisee(item: Resource)
 
 # =======================================================
 # COULEURS DES ITEMS PAR CLASSE
@@ -177,6 +177,14 @@ func _creer_ligne_item(item: Resource) -> HBoxContainer:
 func _creer_bouton_utilisation(item: Resource) -> Button:
 	match item.id:
 
+		"potion_soin":
+			var btn : Button = _creer_bouton("💊 Utiliser", 90)
+			btn.pressed.connect(func() -> void:
+				_fermer()
+				emit_signal("potion_utilisee", item)
+			)
+			return btn
+			
 		"bombe":
 			var btn : Button = _creer_bouton("💣 Lancer", 90)
 			btn.pressed.connect(func() -> void:

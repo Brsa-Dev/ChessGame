@@ -103,9 +103,8 @@ func appliquer_effet(joueur: Node, item: Resource) -> void:
 		# ---------------------------------------------------
 
 		"potion_soin":
-			joueur.hp_actuels = min(joueur.hp_actuels + 30, joueur.hp_max)
-			print("💊 Potion de Soin — HP : %d/%d" % [joueur.hp_actuels, joueur.hp_max])
-
+			print("💊 Potion de Soin ajoutée à l'inventaire")
+			
 		"bottes_vitesse":
 			joueur.pm_max    += 1
 			joueur.pm_actuels += 1  # Effet immédiat dans le tour en cours

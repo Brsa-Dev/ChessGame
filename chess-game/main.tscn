@@ -5,7 +5,7 @@
 [ext_resource type="Script" uid="uid://d1c4gj8rey8gb" path="res://Board/renderer.gd" id="3_h2yge"]
 [ext_resource type="Script" uid="uid://vx764si80mid" path="res://Classe/archer.gd" id="4_5vw27"]
 [ext_resource type="Script" uid="uid://ylfkw30jteip" path="res://Classe/fripon.gd" id="4_kek77"]
-[ext_resource type="Script" uid="uid://dd545mykmfl8k" path="res://Classe/mage.gd" id="5_kek77"]
+[ext_resource type="Script" uid="uid://c1mg3hyujhvxw" path="res://Classe/guerrier.gd" id="4_ycdy4"]
 [ext_resource type="Script" uid="uid://dwdhc37i2tort" path="res://Manager/tour_manager.gd" id="5_lquwl"]
 [ext_resource type="Script" uid="uid://gmarcgm6a54i" path="res://Manager/shop_manager.gd" id="6_272bh"]
 [ext_resource type="PackedScene" uid="uid://mbe0rw1qqi34" path="res://UI/shop_ui.tscn" id="7_5vw27"]
@@ -27,7 +27,7 @@ script = ExtResource("2_0xm2m")
 script = ExtResource("3_h2yge")
 
 [node name="Joueur1" type="Node" parent="." unique_id=754179848]
-script = ExtResource("5_kek77")
+script = ExtResource("4_ycdy4")
 
 [node name="Joueur2" type="Node" parent="." unique_id=1933811520]
 script = ExtResource("4_kek77")
@@ -57,11 +57,13 @@ grow_vertical = 0
 text = "Fin de tour"
 
 [node name="LogUI" parent="UI" unique_id=155916075 instance=ExtResource("8_4c57u")]
-anchors_preset = 1
+anchors_preset = 11
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -1142.0
-offset_right = -862.0
+offset_left = -1293.0
+offset_top = -177.0
+offset_right = -1013.0
+offset_bottom = 173.0
 grow_horizontal = 0
 
 [node name="ShopManager" type="Node" parent="." unique_id=1214474715]

@@ -83,6 +83,13 @@ var on_rafraichir_hud : Callable  # func()
 # =======================================================
 func _input(event: InputEvent) -> void:
 
+	# Bloque tous les inputs de jeu quand l'inventaire est ouvert
+	if inventory_ui._visible:
+		if event is InputEventKey and event.pressed:
+			if event.keycode == TOUCHE_INVENTAIRE:
+				inventory_ui.toggle(tour_manager.get_joueur_actif())
+		return
+		
 	# Touche F — inventaire, autorisé même boutique ouverte
 	if event is InputEventKey and event.pressed:
 		if event.keycode == TOUCHE_INVENTAIRE:
@@ -156,39 +163,39 @@ func _traiter_clic_souris(event: InputEventMouseButton) -> void:
 	var cell         : Vector2i = renderer.screen_to_grid(event.position)
 	var joueur_actif : Node     = tour_manager.get_joueur_actif()
 
-	# Clic hors plateau → désélection
 	if _est_hors_plateau(cell):
 		if joueur_selectionne:
 			_reset_selection()
 			renderer.queue_redraw()
 		return
 
-	# Mode ciblage Bombe — prioritaire sur tout autre clic
 	if bombe_en_attente != null:
 		_appliquer_bombe(cell, joueur_actif)
 		return
 
-	# Mode ciblage Cape de Forêt
 	if cape_en_attente != null:
 		_appliquer_cape_foret(cell, joueur_actif)
 		return
 
-	# Placement initial — le joueur n'est pas encore sur le plateau
 	if not joueur_actif.est_place:
 		_placer_joueur(joueur_actif, cell)
 		return
 
-	# Sélection du joueur actif
+	# Reclique sur soi-même quand sélectionné → désélection
+	var est_sur_soi : bool = cell.x == joueur_actif.grid_x and cell.y == joueur_actif.grid_y
+	if joueur_selectionne and est_sur_soi and sort_selectionne < 0:
+		_reset_selection()
+		renderer.queue_redraw()
+		return
+
 	if not joueur_selectionne:
 		_selectionner_joueur(joueur_actif, cell)
 		return
 
-	# Sort sélectionné — le clic déclenche l'utilisation du sort
 	if sort_selectionne >= 0:
 		_utiliser_sort_sur_clic(joueur_actif, cell)
 		return
 
-	# Pas de sort — le clic est un déplacement ou une attaque de base
 	_traiter_deplacement_ou_attaque(joueur_actif, cell)
 
 
@@ -199,6 +206,13 @@ func _placer_joueur(joueur_actif: Node, cell: Vector2i) -> void:
 	if board.case_occupee(cell.x, cell.y):
 		print("Case déjà occupée !")
 		return
+		
+	# Empêche le placement sur des cases infranchissables
+	var type_case : int = board.get_case(cell.x, cell.y)
+	if type_case in [board.CaseType.VIDE, board.CaseType.MUR]:
+		print("Impossible de se placer sur cette case !")
+		return
+		
 	board.occuper_case(cell.x, cell.y)
 	joueur_actif.placer(cell.x, cell.y)
 	on_log.call("📍 %s placé en (%d,%d)" % [joueur_actif.name, cell.x, cell.y], joueur_actif)
@@ -254,10 +268,23 @@ func _utiliser_sort_sur_clic(joueur_actif: Node, cell: Vector2i) -> void:
 # DÉPLACEMENT OU ATTAQUE DE BASE
 # =======================================================
 func _traiter_deplacement_ou_attaque(joueur_actif: Node, cell: Vector2i) -> void:
-	var joueur_cible : Node = _get_joueur_en(cell.x, cell.y)
+	var joueur_cible : Node       = _get_joueur_en(cell.x, cell.y)
+	var mine         : Dictionary = event_manager.get_mine_en(cell.x, cell.y)
 
-	if joueur_cible != null:
+	if joueur_cible != null and joueur_cible != joueur_actif:
 		_attaquer(joueur_actif, joueur_cible)
+	elif mine != {}:
+		# Attaque de base sur une mine — même vérifications que sur un joueur
+		if not joueur_actif.peut_attaquer(cell.x, cell.y):
+			print("Impossible d'attaquer la mine !")
+			return
+		joueur_actif.pm_actuels       -= joueur_actif.attaque_cout_pm
+		joueur_actif.a_attaque_ce_tour = true
+		event_manager.attaquer_mine(cell.x, cell.y, joueur_actif.attaque_degats, joueur_actif)
+		joueur_actif.gagner_gold_sur_degats(joueur_actif.attaque_degats)
+		on_log.call("⚔️ %s attaque une Mine — %d dmg" % [joueur_actif.name, joueur_actif.attaque_degats], joueur_actif)
+		joueur_selectionne = false
+		on_rafraichir_hud.call()
 	elif joueur_actif.peut_se_deplacer_vers(cell.x, cell.y):
 		_deplacer(joueur_actif, cell)
 	else:
@@ -288,8 +315,9 @@ func _attaquer(attaquant: Node, cible: Node) -> void:
 	if attaquant.fleches_empoisonnees_actif:
 		cible.ajouter_dot("fleches_empoisonnees", 5, 3)
 		attaquant.fleches_empoisonnees_actif = false
+		_retirer_item(attaquant, "fleches_empoisonnees")
 		on_log.call("🏹 Flèches Empoisonnées ! DoT sur %s" % cible.name, attaquant)
-
+	
 	# Synergie Ceinture de Pickpocket — vole 1 Gold à chaque attaque
 	if attaquant.pickpocket_actif and cible.gold > 0:
 		cible.gold     -= 1
@@ -318,6 +346,11 @@ func _deplacer(joueur_actif: Node, cell: Vector2i) -> void:
 	# La forêt coûte COUT_PM_FORET PM au lieu de la distance normale
 	var cout_pm : int = COUT_PM_FORET if type_case_arrivee == board.CaseType.FORET else -1
 
+	# Bloque si PM insuffisants pour le coût réel de la case
+	var cout_reel : int = COUT_PM_FORET if type_case_arrivee == board.CaseType.FORET else 1
+	if joueur_actif.pm_actuels < cout_reel:
+		print("Pas assez de PM pour entrer dans cette case !")
+		return
 	board.liberer_case(joueur_actif.grid_x, joueur_actif.grid_y)
 	joueur_actif.deplacer(cell.x, cell.y, cout_pm)
 
@@ -362,12 +395,22 @@ func _appliquer_bombe(cell: Vector2i, joueur_actif: Node) -> void:
 			j.recevoir_degats(DEGATS_BOMBE)
 			on_log.call("💣 Explosion ! %d dmg sur %s" % [DEGATS_BOMBE, j.name], joueur_actif)
 
-	joueur_actif.inventaire.erase(bombe_en_attente)
+	_retirer_item(joueur_actif, bombe_en_attente.id)
 	bombe_en_attente = null
 	on_rafraichir_hud.call()
 	renderer.queue_redraw()
 
-
+# -------------------------------------------------------
+# Potion de Soin — restaure 30 HP sur le joueur actif.
+# Appelée par inventory_ui via le signal potion_utilisee.
+# -------------------------------------------------------
+func appliquer_potion(item: Resource) -> void:
+	var joueur_actif : Node = tour_manager.get_joueur_actif()
+	joueur_actif.hp_actuels = min(joueur_actif.hp_actuels + 30, joueur_actif.hp_max)
+	_retirer_item(joueur_actif, item.id)
+	on_log.call("💊 %s utilise une Potion de Soin ! +30 HP" % joueur_actif.name, joueur_actif)
+	on_rafraichir_hud.call()
+	
 # -------------------------------------------------------
 # Cape de Forêt — crée une case Forêt temporaire (2 tours)
 # Appelée par inventory_ui via le signal cape_utilisee
@@ -397,7 +440,7 @@ func _appliquer_cape_foret(cell: Vector2i, joueur_actif: Node) -> void:
 
 	# Retire l'item quand toutes les charges sont épuisées
 	if joueur_actif.cape_foret_charges <= 0:
-		joueur_actif.inventaire.erase(cape_en_attente)
+		_retirer_item(joueur_actif, cape_en_attente.id)
 
 	cape_en_attente = null
 	on_log.call("🌲 %s crée une Forêt en (%d,%d)" % [joueur_actif.name, cell.x, cell.y], joueur_actif)
@@ -412,29 +455,16 @@ func _appliquer_cape_foret(cell: Vector2i, joueur_actif: Node) -> void:
 # -------------------------------------------------------
 func appliquer_bandage(item: Resource) -> void:
 	var joueur_actif : Node = tour_manager.get_joueur_actif()
-
-	# On collecte les DoT qui arrivent à 0 tour après réduction,
-	# puis on les supprime après l'itération pour éviter
-	# de modifier le dictionnaire pendant qu'on le parcourt
 	var dots_expires : Array = []
-
 	for source_id in joueur_actif.dots_actifs:
 		joueur_actif.dots_actifs[source_id]["tours_restants"] -= 1
-		print("🩹 Bandage — DoT [%s] réduit à %d tour(s)" % [
-			source_id,
-			joueur_actif.dots_actifs[source_id]["tours_restants"]
-		])
 		if joueur_actif.dots_actifs[source_id]["tours_restants"] <= 0:
 			dots_expires.append(source_id)
-
 	for source_id in dots_expires:
 		joueur_actif.dots_actifs.erase(source_id)
-		print("🩹 DoT [%s] supprimé par le Bandage" % source_id)
-
-	joueur_actif.inventaire.erase(item)
-	on_log.call("🩹 %s utilise un Bandage — tous les DoT réduits de 1 tour" % joueur_actif.name, joueur_actif)
+	_retirer_item(joueur_actif, item.id)
+	on_log.call("🩹 %s utilise un Bandage — DoT réduits de 1 tour" % joueur_actif.name, joueur_actif)
 	on_rafraichir_hud.call()
-
 
 # -------------------------------------------------------
 # Flèches Empoisonnées — active le flag pour la prochaine attaque
@@ -444,11 +474,23 @@ func appliquer_bandage(item: Resource) -> void:
 # dès que l'Archer touche une cible (une seule attaque).
 # L'item reste dans l'inventaire jusqu'à activation manuelle.
 # -------------------------------------------------------
-func appliquer_fleches_empoisonnees(_item: Resource) -> void:
+func appliquer_fleches_empoisonnees(item: Resource) -> void:
 	var joueur_actif : Node = tour_manager.get_joueur_actif()
 	joueur_actif.fleches_empoisonnees_actif = true
-	on_log.call("🏹 %s active les Flèches Empoisonnées — prochaine attaque : DoT !" % joueur_actif.name, joueur_actif)
+	# Les flèches ne sont pas retirées à l'activation — elles le sont après l'attaque
+	on_log.call("🏹 %s active les Flèches Empoisonnées !" % joueur_actif.name, joueur_actif)
 	on_rafraichir_hud.call()
+
+# -------------------------------------------------------
+# Retire le premier item correspondant à l'id donné.
+# erase() compare les références — pas fiable si l'instance
+# passée en signal est différente de celle dans l'inventaire.
+# -------------------------------------------------------
+func _retirer_item(joueur: Node, item_id: String) -> void:
+	for i in range(joueur.inventaire.size()):
+		if joueur.inventaire[i].id == item_id:
+			joueur.inventaire.remove_at(i)
+			return
 
 
 # =======================================================

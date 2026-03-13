@@ -52,7 +52,7 @@ var meteores_en_attente : Array = []  # Météores en vol
 var laves_temporaires   : Array = []  # Cases de lave actives (Météore)
 var pieges_actifs       : Array = []  # Pièges posés sur le plateau
 var forets_temporaires  : Array = []  # Forêts temporaires actives
-
+var murs_temporaires : Array = []	  # Cases murs temporaires
 
 # =======================================================
 # INITIALISATION
@@ -80,6 +80,7 @@ func _initialiser_systemes() -> void:
 	renderer.event_manager = event_manager
 
 	hud_ui.board        = board
+	hud_ui.tour_manager = tour_manager 
 	event_manager.board = board
 
 	# TourManager doit être initialisé avant tout appel à get_joueur_actif()
@@ -112,6 +113,7 @@ func _injecter_references_handlers() -> void:
 	sort_handler.laves_temporaires   = laves_temporaires
 	sort_handler.forets_temporaires  = forets_temporaires
 	sort_handler.pieges_actifs       = pieges_actifs
+	sort_handler.murs_temporaires 	 = murs_temporaires
 
 	# --- Input Handler ---
 	input_handler.board           = board
@@ -154,7 +156,7 @@ func _connecter_signaux() -> void:
 	inventory_ui.cape_utilisee.connect(input_handler.activer_mode_cape_foret)
 	inventory_ui.bandage_utilise.connect(input_handler.appliquer_bandage)
 	inventory_ui.fleches_utilisees.connect(input_handler.appliquer_fleches_empoisonnees)
-
+	inventory_ui.potion_utilisee.connect(input_handler.appliquer_potion)
 
 # -------------------------------------------------------
 # Positionne le bouton Fin de Tour en bas au centre
@@ -180,53 +182,52 @@ func fin_de_tour() -> void:
 
 	var joueur_qui_finit : Node = tour_manager.get_joueur_actif()
 
-	# Effets de case persistants (lave/eau) en fin de tour
 	if joueur_qui_finit.est_place:
 		effects_handler.appliquer_effets_persistants(joueur_qui_finit)
 
-	# -------------------------------------------------------
-	# FORÊTS TEMPORAIRES
-	# Décrémentées uniquement au tour du lanceur
-	# -------------------------------------------------------
+	# FORÊTS TEMPORAIRES — inchangé
 	var forets_a_supprimer : Array = []
 	for foret in forets_temporaires:
 		if foret["lanceur"] == joueur_qui_finit:
 			foret["tours_restants"] -= 1
-			print("🌲 Forêt temp — %d tour(s) restant(s)" % foret["tours_restants"])
 			if foret["tours_restants"] <= 0:
 				forets_a_supprimer.append(foret)
 	for foret in forets_a_supprimer:
 		forets_temporaires.erase(foret)
 		effects_handler.restaurer_cases_foret(foret)
 
-	# -------------------------------------------------------
-	# MÉTÉORES
-	# Décrémentés uniquement au tour du lanceur
-	# -------------------------------------------------------
+	# MURS TEMPORAIRES — inchangé
+	var murs_a_supprimer : Array = []
+	for mur in murs_temporaires:
+		if mur["lanceur"] == joueur_qui_finit:
+			mur["tours_restants"] -= 1
+			if mur["tours_restants"] <= 0:
+				murs_a_supprimer.append(mur)
+	for mur in murs_a_supprimer:
+		murs_temporaires.erase(mur)
+		board.plateau[mur["x"]][mur["y"]] = mur["type_original"]
+	renderer.queue_redraw()
+
+	# MARQUE DÉROBADE — inchangé
+	if joueur_qui_finit.get("marque_cible") != null:
+		joueur_qui_finit.marque_tours_restants -= 1
+		if joueur_qui_finit.marque_tours_restants <= 0:
+			joueur_qui_finit.marque_cible = null
+			_log("🎯 Marque de %s expirée sans explosion" % joueur_qui_finit.name, joueur_qui_finit)
+
+	tour_manager.passer_au_tour_suivant()
+	var joueur_suivant : Node = tour_manager.get_joueur_actif()
+
+	# MÉTÉORES — vérifiés au DÉBUT du tour du lanceur
 	var meteores_a_exploser : Array = []
 	for meteore in meteores_en_attente:
-		if meteore["lanceur"] == joueur_qui_finit:
+		if meteore["lanceur"] == joueur_suivant:
 			meteore["tours_restants"] -= 1
-			print("☄️ Météore — %d tour(s) restant(s)" % meteore["tours_restants"])
 			if meteore["tours_restants"] <= 0:
 				meteores_a_exploser.append(meteore)
 	for meteore in meteores_a_exploser:
 		sort_handler.exploser_meteore(meteore)
 		meteores_en_attente.erase(meteore)
-
-	tour_manager.passer_au_tour_suivant()
-	var joueur_suivant : Node = tour_manager.get_joueur_actif()
-
-	# -------------------------------------------------------
-	# MARQUE DÉROBADE
-	# Décrémentée au tour du Fripon lanceur
-	# -------------------------------------------------------
-	if joueur_qui_finit.get("marque_cible") != null:
-		joueur_qui_finit.marque_tours_restants -= 1
-		print("🎯 Marque — %d tour(s) avant expiration" % joueur_qui_finit.marque_tours_restants)
-		if joueur_qui_finit.marque_tours_restants <= 0:
-			joueur_qui_finit.marque_cible = null
-			print("🎯 Marque expirée sans dégâts")
 
 	_log("--- Tour de %s ---" % joueur_suivant.name)
 	renderer.joueur_actif       = joueur_suivant

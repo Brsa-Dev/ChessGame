@@ -298,20 +298,24 @@ func ajouter_dot(source_id: String, degats_par_tour: int, duree: int) -> void:
 # au début du tour du joueur affecté
 # -------------------------------------------------------
 func appliquer_dots() -> void:
-	var dots_expires : Array = []
+	var rage : Variant = get("rage_active")
+	# Si le joueur est en Rage Berserker, les DoT sont ignorés ce tour
+	if rage != null and rage == true:
+		print("⚔️ %s — Rage active, DoT ignorés ce tour" % name)
+		return
 
+	var dots_expires : Array = []
 	for source_id in dots_actifs:
 		var dot : Dictionary = dots_actifs[source_id]
 		recevoir_degats(dot["degats"])
 		dot["tours_restants"] -= 1
-		print("☠️ DoT [%s] — %d tour(s) restant(s)" % [source_id, dot["tours_restants"]])
 		if dot["tours_restants"] <= 0:
 			dots_expires.append(source_id)
-
-	# Suppression après itération pour éviter les erreurs de modification en cours
+			print("☠️ DoT [%s] expiré" % source_id)
+		else:
+			print("☠️ DoT [%s] — %d tour(s) restant(s)" % [source_id, dot["tours_restants"]])
 	for source_id in dots_expires:
 		dots_actifs.erase(source_id)
-		print("☠️ DoT [%s] expiré" % source_id)
 
 
 # =======================================================

@@ -207,9 +207,12 @@ func _dessiner_surbrillance_deplacement() -> void:
 			var type_case : int = board.get_case(x, y)
 			if type_case in [board.CaseType.VIDE, board.CaseType.MUR]:
 				continue
-			if joueur_actif.peut_se_deplacer_vers(x, y):
+			# Une case avec une mine ne peut pas être un déplacement
+			if event_manager != null and event_manager.get_mine_en(x, y) != {}:
+				continue
+			var cout_reel : int = 2 if type_case == board.CaseType.FORET else 1
+			if joueur_actif.pm_actuels >= cout_reel and joueur_actif.peut_se_deplacer_vers(x, y):
 				_dessiner_surbrillance_case(x, y, COULEUR_CASE_ACCESSIBLE)
-
 
 func _dessiner_surbrillance_attaque() -> void:
 	# Ennemis attaquables

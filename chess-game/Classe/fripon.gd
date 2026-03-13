@@ -110,7 +110,18 @@ func peut_attaquer(cible_x: int, cible_y: int) -> bool:
 		return true  # PM non vérifiés — coût géré dans attaquer()
 	return pm_actuels >= attaque_cout_pm
 
-
+# -------------------------------------------------------
+# Override — réinitialise la Ruée au début de chaque tour.
+# Le Fripon commence toujours son tour avec la Ruée disponible.
+# Si la Ruée est utilisée, il faut 3 attaques dans CE tour
+# pour pouvoir la relancer avant la fin du tour.
+# -------------------------------------------------------
+func debut_tour() -> void:
+	super.debut_tour()
+	ruee_disponible      = true
+	attaques_depuis_ruee = 0
+	s_est_deplace_ce_tour = false
+	
 # =======================================================
 # OVERRIDE — attaquer
 # -------------------------------------------------------

@@ -48,6 +48,9 @@ const TOUCHES_SORTS : Array = ["A", "Z", "E", "R"]
 
 var board : Node = null  # Nécessaire pour lire le type de la case actuelle
 
+var tour_manager : Node = null
+
+var _label_timer : Label = null
 
 # =======================================================
 # NŒUDS — Construits dans _ready()
@@ -68,6 +71,7 @@ func _ready() -> void:
 # Construit le panneau principal et les blocs joueurs.
 # -------------------------------------------------------
 func _construire_panel() -> void:
+	
 	_panel = PanelContainer.new()
 	_panel.anchor_left   = 1.0
 	_panel.anchor_right  = 1.0
@@ -87,6 +91,11 @@ func _construire_panel() -> void:
 	vbox.custom_minimum_size      = Vector2(HUD_LARGEUR - 10, 0)
 	vbox.size_flags_horizontal    = Control.SIZE_EXPAND_FILL
 	scroll.add_child(vbox)
+	
+	_label_timer = Label.new()
+	_label_timer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_label_timer.add_theme_color_override("font_color", Color.WHITE)
+	vbox.add_child(_label_timer)
 
 	var titre : Label = Label.new()
 	titre.text                 = "📊 Informations"
@@ -188,6 +197,20 @@ func _barre(pct: float, longueur: int) -> String:
 	return "[" + "█".repeat(rempli) + "░".repeat(longueur - rempli) + "]"
 
 
+# -------------------------------------------------------
+# Met à jour le timer de tour chaque frame.
+# Passe au rouge quand il reste moins de 30 secondes.
+# -------------------------------------------------------
+func _process(_delta: float) -> void:
+	if tour_manager == null or _label_timer == null:
+		return
+	var temps_restant : float = tour_manager._timer.time_left
+	var minutes       : int   = int(temps_restant) / 60
+	var secondes      : int   = int(temps_restant) % 60
+	_label_timer.text = "⏱ %d:%02d" % [minutes, secondes]
+	var couleur : Color = Color.RED if temps_restant < 30.0 else Color.WHITE
+	_label_timer.add_theme_color_override("font_color", couleur)
+	
 # -------------------------------------------------------
 # Détermine la classe d'un joueur via son resource_path
 # -------------------------------------------------------

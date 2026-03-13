@@ -81,6 +81,7 @@ func _notification(what: int) -> void:
 
 
 func _repositionner() -> void:
-	var taille : Vector2 = get_viewport().get_visible_rect().size
+	# Force les anchors en top-left pour ignorer les offsets de main.tscn
+	set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 	set_position(Vector2(5, 5))
-	set_size(Vector2(350, taille.y - 10))
+	set_size(Vector2(350, get_viewport().get_visible_rect().size.y - 10))

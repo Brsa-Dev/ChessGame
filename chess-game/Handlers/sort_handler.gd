@@ -33,6 +33,7 @@ const DEGATS_REBOND_FLECHE  : int = 10   # Dégâts du rebond de la Flèche Rebo
 const RAYON_REBOND_FLECHE   : int = 2    # Rayon de recherche du rebond (distance Manhattan)
 const DEGATS_TIR_CIBLE_FORET: int = 60  # Dégâts du Tir Ciblé sur case forêt
 const DUREE_FORET_PLUIE     : int = 2    # Tours de durée des forêts de la Pluie de Flèches
+const COUT_GOLD_TIR_FORET   : int = 5
 
 # -------------------------------------------------------
 # Constantes — sorts Fripon
@@ -81,7 +82,7 @@ var meteores_en_attente : Array = []  # Météores en vol
 var laves_temporaires   : Array = []  # Cases de lave actives
 var forets_temporaires  : Array = []  # Forêts temporaires actives
 var pieges_actifs       : Array = []  # Pièges posés sur le plateau
-
+var murs_temporaires : Array = []	  # Murs temporaires actives
 
 # =======================================================
 # POINT D'ENTRÉE — Utiliser un sort
@@ -153,7 +154,6 @@ func _dispatcher_sort(joueur: Node, sort: Resource, cible: Node, cible_x: int, c
 # =======================================================
 
 func _sort_guerrier_mur(joueur: Node, sort: Resource, cible_x: int, cible_y: int) -> bool:
-	# Empêche de placer un mur sur un joueur ou une case Tour
 	if _get_joueur_en(cible_x, cible_y) != null:
 		print("Impossible — un joueur est sur cette case !")
 		return false
@@ -162,6 +162,16 @@ func _sort_guerrier_mur(joueur: Node, sort: Resource, cible_x: int, cible_y: int
 		return false
 
 	_consommer_ressources(joueur, sort)
+
+	# Mémorise le type original pour restauration après 2 tours
+	murs_temporaires.append({
+		"x"            : cible_x,
+		"y"            : cible_y,
+		"type_original": board.get_case(cible_x, cible_y),
+		"tours_restants": 2,
+		"lanceur"      : joueur
+	})
+
 	board.plateau[cible_x][cible_y] = board.CaseType.MUR
 	renderer.queue_redraw()
 	_log("🧱 %s crée un Mur en (%d,%d)" % [joueur.name, cible_x, cible_y], joueur)
@@ -170,6 +180,9 @@ func _sort_guerrier_mur(joueur: Node, sort: Resource, cible_x: int, cible_y: int
 
 func _sort_guerrier_hache(joueur: Node, sort: Resource, cible: Node) -> bool:
 	if not cible:
+		return false
+	if not _a_ligne_de_vue(joueur.grid_x, joueur.grid_y, cible.grid_x, cible.grid_y):
+		print("Hache bloquée — pas de ligne de vue !")
 		return false
 	_consommer_ressources(joueur, sort)
 	var degats : int = sort.degats + joueur.bonus_degats_sorts
@@ -188,14 +201,18 @@ func _sort_guerrier_bouclier(joueur: Node, sort: Resource, cible: Node) -> bool:
 	cible.recevoir_degats(degats)
 	joueur.gagner_gold_sur_degats(degats)
 
-	var bloque_par_mur : bool = _repousser_joueur(joueur, cible, CASES_REPOUSSE_BOUCLIER)
+	var bloque_obstacle : bool = _repousser_joueur(joueur, cible, CASES_REPOUSSE_BOUCLIER)
+
+	# Applique l'effet de la case d'arrivée (Lave, Eau, Forêt...)
+	effects_handler.appliquer_effet_case(cible)
+
+	renderer.queue_redraw()
 	_log("🛡️ %s — Bouclier : %d dmg + repousse %s" % [joueur.name, degats, cible.name], joueur)
 
-	# Dégâts bonus si la cible heurte un mur
-	if bloque_par_mur:
+	if bloque_obstacle:
 		cible.recevoir_degats(DEGATS_IMPACT_MUR)
 		joueur.gagner_gold_sur_degats(DEGATS_IMPACT_MUR)
-		_log("💥 Impact mur sur %s ! +%d dmg" % [cible.name, DEGATS_IMPACT_MUR], joueur)
+		_log("💥 Impact obstacle sur %s ! +%d dmg" % [cible.name, DEGATS_IMPACT_MUR], joueur)
 
 	return true
 
@@ -275,10 +292,8 @@ func _sort_mage_tempete(joueur: Node, sort: Resource) -> bool:
 func _sort_archer_fleche(joueur: Node, sort: Resource, cible: Node, cible_x: int, cible_y: int) -> bool:
 	if not cible:
 		return false
-
-	# Vérification ligne de vue (Bresenham)
 	if not _a_ligne_de_vue(joueur.grid_x, joueur.grid_y, cible_x, cible_y):
-		print("Pas de ligne de vue pour la Flèche !")
+		print("Flèche bloquée — pas de ligne de vue !")
 		return false
 
 	_consommer_ressources(joueur, sort)
@@ -287,9 +302,9 @@ func _sort_archer_fleche(joueur: Node, sort: Resource, cible: Node, cible_x: int
 	joueur.gagner_gold_sur_degats(degats_principal)
 	_log("🏹 %s — Flèche : %d dmg sur %s" % [joueur.name, degats_principal, cible.name], joueur)
 
-	# Tentative de rebond sur une seconde cible dans le rayon
+	# Rebond sur la cible la plus proche dans un rayon de 2 cases autour de la cible initiale
 	var cible_rebond : Node = _trouver_cible_rebond(joueur, cible)
-	if cible_rebond and _a_ligne_de_vue(cible.grid_x, cible.grid_y, cible_rebond.grid_x, cible_rebond.grid_y):
+	if cible_rebond:
 		cible_rebond.recevoir_degats(DEGATS_REBOND_FLECHE)
 		joueur.gagner_gold_sur_degats(DEGATS_REBOND_FLECHE)
 		_log("↩️ Rebond sur %s : %d dmg" % [cible_rebond.name, DEGATS_REBOND_FLECHE], joueur)
@@ -316,19 +331,28 @@ func _sort_archer_piege(joueur: Node, sort: Resource, cible_x: int, cible_y: int
 func _sort_archer_tir_cible(joueur: Node, sort: Resource, cible: Node, cible_x: int, cible_y: int) -> bool:
 	if not cible:
 		return false
-
-	# Vérification ligne de vue obligatoire
 	if not _a_ligne_de_vue(joueur.grid_x, joueur.grid_y, cible_x, cible_y):
 		print("Tir Ciblé bloqué — pas de ligne de vue !")
 		return false
 
+	var est_en_foret : bool = board.get_case(cible_x, cible_y) == board.CaseType.FORET
+
+	# Vérifie le Gold supplémentaire requis si la cible est en Forêt
+	if est_en_foret and joueur.gold < COUT_GOLD_TIR_FORET:
+		print("Pas assez de Gold pour Tir Ciblé en Forêt ! (%d requis)" % COUT_GOLD_TIR_FORET)
+		return false
+
 	_consommer_ressources(joueur, sort)
-	var est_en_foret   : bool = board.get_case(cible_x, cible_y) == board.CaseType.FORET
-	var degats_finaux  : int  = DEGATS_TIR_CIBLE_FORET if est_en_foret else (sort.degats + joueur.bonus_degats_sorts)
+
+	# Déduit le coût Gold supplémentaire Forêt après les ressources de base
+	if est_en_foret:
+		joueur.gold -= COUT_GOLD_TIR_FORET
+
+	var degats_finaux : int = DEGATS_TIR_CIBLE_FORET if est_en_foret else (sort.degats + joueur.bonus_degats_sorts)
 	cible.recevoir_degats(degats_finaux)
 	joueur.gagner_gold_sur_degats(degats_finaux)
 
-	var suffix : String = " (forêt !)" if est_en_foret else ""
+	var suffix : String = " (forêt ! -5 Gold)" if est_en_foret else ""
 	_log("🎯 %s — Tir Ciblé : %d dmg sur %s%s" % [joueur.name, degats_finaux, cible.name, suffix], joueur)
 	return true
 
@@ -503,6 +527,7 @@ func exploser_meteore(meteore: Dictionary) -> void:
 	var cy      : int  = meteore["cible_y"]
 	var lanceur : Node = meteore["lanceur"]
 	print("☄️ IMPACT du Météore en (%d,%d) !" % [cx, cy])
+	_log("☄️ %s — Météore : impact en (%d,%d) !" % [lanceur.name, cx, cy], lanceur)
 
 	var cases_transformees : Array = []
 
@@ -578,41 +603,38 @@ func exploser_marque_derobade(fripon: Node) -> void:
 # attaquant → cible. Retourne true si bloqué par un mur.
 # -------------------------------------------------------
 func _repousser_joueur(attaquant: Node, cible: Node, nb_cases: int) -> bool:
-	# Calcule le vecteur directionnel normalisé
-	var dir_x : int = cible.grid_x - attaquant.grid_x
-	var dir_y : int = cible.grid_y - attaquant.grid_y
+	var dir_x : int  = cible.grid_x - attaquant.grid_x
+	var dir_y : int  = cible.grid_y - attaquant.grid_y
 	if dir_x != 0: dir_x = dir_x / abs(dir_x)
 	if dir_y != 0: dir_y = dir_y / abs(dir_y)
 
-	var pos_x : int  = cible.grid_x
-	var pos_y : int  = cible.grid_y
-	var bloque : bool = false
+	var pos_x           : int  = cible.grid_x
+	var pos_y           : int  = cible.grid_y
+	var bloque_obstacle : bool = false
 
 	for _i in range(nb_cases):
 		var test_x : int = pos_x + dir_x
 		var test_y : int = pos_y + dir_y
-		# Hors plateau
 		if test_x < 0 or test_x >= 8 or test_y < 0 or test_y >= 8:
+			bloque_obstacle = true
 			break
 		var type_case : int = board.get_case(test_x, test_y)
-		# Bloqué par mur ou vide
-		if type_case in [board.CaseType.MUR, board.CaseType.VIDE]:
-			bloque = true
+		# TOUR ajoutée — inflige les dégâts d'impact sans que la cible y entre
+		if type_case in [board.CaseType.MUR, board.CaseType.VIDE, board.CaseType.TOUR]:
+			bloque_obstacle = true
 			break
-		# Bloqué par un autre joueur
 		if board.case_occupee(test_x, test_y):
 			break
 		pos_x = test_x
 		pos_y = test_y
 
-	# Déplace effectivement si la position a changé
 	if pos_x != cible.grid_x or pos_y != cible.grid_y:
 		board.liberer_case(cible.grid_x, cible.grid_y)
 		cible.grid_x = pos_x
 		cible.grid_y = pos_y
 		board.occuper_case(pos_x, pos_y)
 
-	return bloque
+	return bloque_obstacle
 
 
 # -------------------------------------------------------
