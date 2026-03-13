@@ -9,6 +9,10 @@ var joueurs: Array = []
 var joueur_actif: Node = null
 var joueur_selectionne: bool = false
 
+# Référence à l'event_manager pour dessiner mines et tas
+# Assignée par main.gd dans _ready()
+var event_manager: Node = null
+
 const COULEURS = {
 	0: Color(0.85, 0.85, 0.85),  # NORMAL  — gris clair
 	1: Color(0.9,  0.3,  0.1 ),  # LAVE    — rouge/orange
@@ -27,6 +31,11 @@ const COULEURS_JOUEURS = [
 
 # En haut avec les autres constantes de couleur
 const COULEUR_SORT = Color(0.7, 0.2, 1.0, 0.5)  # Violet transparent
+
+# Couleurs des entités d'événement
+const COULEUR_MINE    = Color(0.85, 0.65, 0.0)   # Doré foncé
+const COULEUR_PIECE   = Color(1.0,  0.85, 0.0)   # Jaune vif
+const COULEUR_COFFRE  = Color(0.6,  0.0,  0.8)   # Violet
 
 # Ajoute cette variable
 var sort_selectionne: int = -1  # Index du sort actif (-1 = aucun)
@@ -53,6 +62,8 @@ func _draw():
 	if joueurs.is_empty():
 		return
 
+	if event_manager != null:
+		_dessiner_evenements()
 	# 2. Si le joueur est sélectionné, on affiche les deux surbrillances
 	if joueur_actif != null and joueur_selectionne:
 		_dessiner_cases_accessibles()
@@ -103,7 +114,10 @@ func _dessiner_cases_attaquables():
 			# - 2ème attaque du Fripon
 			if joueur_actif.peut_attaquer(joueur.grid_x, joueur.grid_y):
 				_dessiner_surbrillance(joueur.grid_x, joueur.grid_y, COULEUR_ATTAQUE)
-
+	if event_manager != null:
+		for mine in event_manager.mines_actives:
+			if joueur_actif.peut_attaquer(mine["x"], mine["y"]):
+				_dessiner_surbrillance(mine["x"], mine["y"], COULEUR_ATTAQUE)
 func _dessiner_cases_sort():
 	var sort = joueur_actif.sorts[sort_selectionne]
 	
@@ -182,6 +196,56 @@ func _centrer_plateau():
 	
 	queue_redraw()
 func _notification(what):
+	
+
 	if what == NOTIFICATION_WM_SIZE_CHANGED:
 		_centrer_plateau()
 		queue_redraw()
+
+# -----------------------------------------------
+# _dessiner_evenements — Mines, tas de pièces, coffres
+# -----------------------------------------------
+func _dessiner_evenements():
+	# --- Mines d'or : grand losange doré avec barre de vie ---
+	for mine in event_manager.mines_actives:
+		var cx = OFFSET.x + (mine["x"] - mine["y"]) * (TILE_W / 2)
+		var cy = OFFSET.y + (mine["x"] + mine["y"]) * (TILE_H / 2)
+
+		# Corps de la mine : losange doré (plus petit que la case)
+		var demi_w = TILE_W / 3.0
+		var demi_h = TILE_H / 3.0
+		var points = PackedVector2Array([
+			Vector2(cx,          cy - demi_h),
+			Vector2(cx + demi_w, cy),
+			Vector2(cx,          cy + demi_h),
+			Vector2(cx - demi_w, cy),
+		])
+		draw_colored_polygon(points, COULEUR_MINE)
+		draw_polyline(points, Color.BLACK, 1.5)
+		draw_line(points[3], points[0], Color.BLACK, 1.5)
+
+		# Barre de vie au-dessus de la mine
+		var pct = float(mine["hp"]) / float(mine["hp_max"])
+		var barre_largeur = 40.0
+		var barre_h = 5.0
+		var bx = cx - barre_largeur / 2
+		var by = cy - demi_h - 10
+		# Fond gris
+		draw_rect(Rect2(bx, by, barre_largeur, barre_h), Color(0.3, 0.3, 0.3))
+		# Remplissage rouge → vert selon HP
+		var couleur_barre = Color(1.0 - pct, pct, 0.0)
+		draw_rect(Rect2(bx, by, barre_largeur * pct, barre_h), couleur_barre)
+
+	# --- Tas de pièces : petit cercle jaune vif ---
+	for tas in event_manager.tas_pieces_actifs:
+		var cx = OFFSET.x + (tas["x"] - tas["y"]) * (TILE_W / 2)
+		var cy = OFFSET.y + (tas["x"] + tas["y"]) * (TILE_H / 2)
+		draw_circle(Vector2(cx, cy), 10, COULEUR_PIECE)
+		draw_arc(Vector2(cx, cy), 10, 0, TAU, 16, Color.BLACK, 1.5)
+
+	# --- Coffres : petit carré violet ---
+	for coffre in event_manager.coffres_actifs:
+		var cx = OFFSET.x + (coffre["x"] - coffre["y"]) * (TILE_W / 2)
+		var cy = OFFSET.y + (coffre["x"] + coffre["y"]) * (TILE_H / 2)
+		draw_circle(Vector2(cx, cy), 14, COULEUR_COFFRE)
+		draw_arc(Vector2(cx, cy), 14, 0, TAU, 16, Color.BLACK, 1.5)

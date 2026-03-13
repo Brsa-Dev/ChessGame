@@ -11,6 +11,7 @@ extends Node2D
 @onready var shop_ui = $ShopUI
 @onready var log_ui = $UI/LogUI
 @onready var hud_ui = $HudUI
+@onready var event_manager = $EventManager
 
 var joueur_selectionne: bool = false
 var sort_selectionne: int = -1
@@ -30,6 +31,17 @@ func _ready():
 	# Le rafraichir() sera appelé APRÈS tour_manager.initialiser()
 	hud_ui.board = board
 
+	# EventManager — doit connaître le board pour trouver les cases libres
+	event_manager.board = board
+
+	# Donne la référence au renderer pour le dessin
+	renderer.event_manager = event_manager
+	
+	# Connecte les signaux de l'event manager
+	event_manager.evenement_declenche.connect(_on_evenement_declenche)
+	event_manager.piece_ramassee.connect(_on_piece_ramassee)
+	event_manager.coffre_ramasse.connect(_on_coffre_ramasse)
+	
 	# --- Renderer ---
 	renderer.joueurs = [joueur1, joueur2, joueur3]
 
@@ -229,6 +241,19 @@ func _input(event):
 					else:
 						print("Cible hors de portée !")
 
+			elif event_manager.get_mine_en(cell.x, cell.y) != {}:
+				if joueur_actif.peut_attaquer(cell.x, cell.y):
+					joueur_actif.pm_actuels -= joueur_actif.attaque_cout_pm
+					joueur_actif.a_attaque_ce_tour = true
+					joueur_actif.gagner_gold_sur_degats(joueur_actif.attaque_degats)
+					event_manager.attaquer_mine(cell.x, cell.y, joueur_actif.attaque_degats, joueur_actif)
+					_log("⛏️ " + joueur_actif.name + " attaque une Mine — " + str(joueur_actif.attaque_degats) + " dmg", joueur_actif)
+					_rafraichir_hud()
+					joueur_selectionne = false
+					renderer.queue_redraw()
+				else:
+					print("Mine hors de portée ou déjà attaqué !")
+
 			elif joueur_actif.peut_se_deplacer_vers(cell.x, cell.y):
 				var type_case = board.get_case(cell.x, cell.y)
 				if type_case == board.CaseType.VIDE or type_case == board.CaseType.MUR:
@@ -247,6 +272,7 @@ func _input(event):
 						joueur_actif.s_est_deplace_ce_tour = true
 					_appliquer_effet_case(joueur_actif)
 					_verifier_pieges(joueur_actif)
+					event_manager.verifier_ramassage(joueur_actif)
 					board.occuper_case(joueur_actif.grid_x, joueur_actif.grid_y)
 					joueur_selectionne = false
 					_log("🚶 " + joueur_actif.name + " → (" + str(cell.x) + "," + str(cell.y) + ") — PM : " + str(joueur_actif.pm_actuels), joueur_actif)
@@ -293,6 +319,20 @@ func fin_de_tour():
 
 # -----------------------------------------------
 func _on_tour_global_termine(_numero_tour: int):
+	
+	event_manager.verifier_tour(_numero_tour)
+	
+	var cases_restaurees = event_manager.reduire_inondations()
+	if cases_restaurees.size() > 0:
+		# Ré-applique l'effet de case aux joueurs sur les cases restaurées
+		for case_info in cases_restaurees:
+			var j = _get_joueur_en(case_info["x"], case_info["y"])
+			if j:
+				_appliquer_effet_case(j)
+		_log("🍂 === Les cases inondées sont restaurées ===")
+		
+	renderer.queue_redraw()
+	
 	print("=== Fin du tour global ", _numero_tour, " — Traitement météores/laves ===")
 	var meteores_a_supprimer = []
 	for meteore in meteores_en_attente:
@@ -363,6 +403,54 @@ func _appliquer_effets_persistants(joueur: Node):
 # -----------------------------------------------
 func _utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) -> bool:
 	var cible = _get_joueur_en(cible_x, cible_y)
+	
+	# -----------------------------------------------
+	# DÉTECTION MINE — Si la cible est une mine
+	# et que le sort inflige des dégâts directs,
+	# on redirige les dégâts sur la mine.
+	# Les sorts utilitaires (Gel, Mur...) sont exclus.
+	# -----------------------------------------------
+	var mine = event_manager.get_mine_en(cible_x, cible_y)
+	if mine != {} and cible == null:
+		# Sorts qui ne font pas de sens sur une mine → bloqués
+		var sorts_inapplicables = [
+			"guerrier_mur", "guerrier_rage",
+			"mage_gel", "mage_tempete",
+			"archer_piege",
+			"fripon_derobade", "fripon_lame", "fripon_frenesie"
+		]
+		if sort.id in sorts_inapplicables:
+			print("Ce sort ne peut pas cibler une mine !")
+			return false
+		
+		# Vérifie portée et PM
+		var portee_effective = sort.portee + joueur.bonus_range_sorts
+		var distance = abs(cible_x - joueur.grid_x) + abs(cible_y - joueur.grid_y)
+		if distance > portee_effective and sort.portee != 0:
+			print("Mine hors de portée du sort !")
+			return false
+		if joueur.pm_actuels < sort.cout_pm:
+			print("Pas assez de PM !")
+			return false
+		if joueur.gold < sort.cout_gold:
+			print("Pas assez de Gold !")
+			return false
+		
+		# Consomme les ressources et déclenche le CD
+		joueur.pm_actuels  -= sort.cout_pm
+		joueur.gold        -= sort.cout_gold
+		sort.declencher_cooldown()
+		
+		# Calcule les dégâts (avec bonus mage si applicable)
+		var degats = sort.degats + joueur.bonus_degats_sorts
+		joueur.gagner_gold_sur_degats(degats)
+		event_manager.attaquer_mine(cible_x, cible_y, degats, joueur)
+		
+		_log("⛏️ " + joueur.name + " — " + sort.nom + " : " + str(degats) + " dmg sur une Mine", joueur)
+		_rafraichir_hud()
+		renderer.queue_redraw()
+		return true
+	
 	match sort.id:
 		
 		# -----------------------------------------------
@@ -888,4 +976,44 @@ func _get_joueur_en(x: int, y: int) -> Node:
 func _on_joueur_mort(joueur: Node):
 	board.liberer_case(joueur.grid_x, joueur.grid_y)
 	_log("💀 " + joueur.name + " est éliminé !")  # blanc = système
+	renderer.queue_redraw()
+
+
+# -----------------------------------------------
+# Callbacks événements
+# -----------------------------------------------
+func _on_evenement_declenche(nom: String):
+	match nom:
+		"mine_or":
+			_log("⛏️ === 3 Mines d'Or sont apparues ! Détruisez-les pour du Gold ===")
+		"coffre":
+			_log("💎 === Un Coffre au Trésor est apparu ! Marchez dessus pour le ramasser ===")
+
+		# ← AJOUTE CES DEUX CAS
+		"tempete":
+			# Déduit 1 PM à chaque joueur vivant, min 0
+			for j in [joueur1, joueur2, joueur3]:
+				if not j.est_mort:
+					j.pm_malus_prochain_tour = 1
+			_log("⚡ === Tempête Électrique ! Tous les joueurs perdent 1 PM ce tour ===")
+			_rafraichir_hud()
+
+		"inondation":
+			# Applique l'effet Eau aux joueurs déjà sur les cases inondées
+			for j in [joueur1, joueur2, joueur3]:
+				if j.est_place and not j.est_mort:
+					if board.get_case(j.grid_x, j.grid_y) == board.CaseType.EAU:
+						_appliquer_effet_case(j)
+			_log("🌊 === Inondation ! 4 cases deviennent Eau pendant 2 tours ===")
+			renderer.queue_redraw()
+			_rafraichir_hud()
+			
+func _on_piece_ramassee(joueur: Node, gold: int):
+	_log("💰 " + joueur.name + " ramasse un tas de pièces ! +" + str(gold) + " Gold", joueur)
+	_rafraichir_hud()
+	renderer.queue_redraw()
+
+func _on_coffre_ramasse(joueur: Node, gold: int):
+	_log("💎 " + joueur.name + " ouvre le coffre ! +" + str(gold) + " Gold", joueur)
+	_rafraichir_hud()
 	renderer.queue_redraw()

@@ -48,6 +48,11 @@ var bonus_range_sorts: int = 0
 # Bonus de dégâts sur les sorts (Mage)
 var bonus_degats_sorts: int = 0
 
+# Malus de PM à appliquer au PROCHAIN debut_tour()
+# Utilisé par la Tempête Électrique pour affecter
+# même le joueur dont le tour vient de commencer
+var pm_malus_prochain_tour: int = 0
+
 # Liste des sorts du joueur (initialisée par chaque classe fille)
 var sorts: Array = []
 
@@ -204,6 +209,9 @@ func gagner_gold_sur_degats(degats: int):
 # -----------------------------------------------
 func debut_tour():
 	pm_actuels = pm_max
+	if pm_malus_prochain_tour > 0:
+		pm_actuels = max(0, pm_actuels - pm_malus_prochain_tour)
+		pm_malus_prochain_tour = 0  # Consomme le malus — s'applique 1 seule fois
 	a_attaque_ce_tour = false
 	for sort in sorts:
 		sort.reduire_cooldown()
