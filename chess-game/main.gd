@@ -52,6 +52,12 @@ func _ready():
 	# --- HUD : maintenant que tout est initialisé, on peut rafraîchir ---
 	hud_ui.rafraichir([joueur1, joueur2, joueur3], tour_manager.get_joueur_actif())
 
+	var taille_ecran = get_viewport().get_visible_rect().size
+	bouton_fin_tour.set_position(Vector2(
+		(taille_ecran.x / 2) - 55,  # Centré sur l'écran
+		taille_ecran.y - 45          # Collé en bas
+	))
+
 	renderer.queue_redraw()
 	print("Main prêt !")
 

@@ -15,14 +15,6 @@
 [node name="Main" type="Node2D" unique_id=572728295]
 script = ExtResource("1_ig7tw")
 
-[node name="Fond" type="ColorRect" parent="." unique_id=1953549344]
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-color = Color(0.16862746, 0.16862746, 0.16862746, 1)
-
 [node name="Board" type="Node" parent="." unique_id=909297872]
 script = ExtResource("2_0xm2m")
 

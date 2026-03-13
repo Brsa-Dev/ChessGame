@@ -58,11 +58,6 @@ func _ready():
 	titre.add_theme_color_override("font_color", Color.WHITE)
 	vbox.add_child(titre)
 
-	var taille = get_viewport().get_visible_rect().size
-	bouton_fin_tour.set_position(Vector2(
-		taille.x / 2 - 60,   # Centré horizontalement
-		taille.y - 50         # Collé en bas
-	))
 	# Crée un bloc RichTextLabel par joueur (3 joueurs)
 	for i in range(3):
 		vbox.add_child(HSeparator.new())

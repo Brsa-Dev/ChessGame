@@ -18,6 +18,10 @@ const COULEUR_SYSTEME = Color.WHITE  # Changements de tour, morts, boutique...
 
 @onready var conteneur_messages = $VBoxContainer/Messages
 
+func _ready():
+	# Différé pour avoir la taille réelle du viewport
+	call_deferred("_repositionner")
+	
 # -----------------------------------------------
 # ajouter — appelé par main.gd à chaque action
 # message : texte à afficher
@@ -50,4 +54,4 @@ func _notification(what):
 func _repositionner():
 	var taille = get_viewport().get_visible_rect().size
 	set_position(Vector2(5, 5))
-	set_size(Vector2(195, taille.y - 10))
+	set_size(Vector2(350, taille.y - 10))

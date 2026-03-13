@@ -37,7 +37,9 @@ const COULEUR_ACCESSIBLE = Color(1.0, 1.0, 0.3, 0.5)
 const COULEUR_ATTAQUE = Color(1.0, 0.2, 0.2, 0.5)
 
 func _ready():
-	_centrer_plateau()
+	# call_deferred garantit que le viewport est prêt
+	# avant de calculer l'OFFSET
+	call_deferred("_centrer_plateau")
 	print("Renderer prêt !")
 
 func _draw():
@@ -162,12 +164,23 @@ func point_in_tile(pos: Vector2, x: int, y: int) -> bool:
 
 func _centrer_plateau():
 	var taille = get_viewport().get_visible_rect().size
-	var largeur_utile = taille.x - 200 - 260
-	var centre_x = 200 + (largeur_utile / 2)
-	# Le plateau fait 8 cases → hauteur totale = 8 * TILE_H
-	# On le centre verticalement aussi
-	OFFSET = Vector2(centre_x, (taille.y - 8 * TILE_H) / 2 + 30)
-
+	if taille == Vector2.ZERO:
+		return  # Sécurité — pas encore initialisé
+	
+	# Zone utile entre LogUI (200px) et HUD (305px)
+	var zone_debut = 200.0
+	var zone_fin   = taille.x - 305.0
+	var centre_x   = zone_debut + (zone_fin - zone_debut) / 2.0
+	
+	# Hauteur réelle du plateau isométrique :
+	# La case (0,0) est en haut, la case (7,7) est en bas.
+	# Hauteur totale = (7 + 7) * (TILE_H / 2) + TILE_H
+	var plateau_h = (7 + 7) * (TILE_H / 2.0) + TILE_H
+	
+	# On centre verticalement avec une légère marge en haut
+	OFFSET = Vector2(centre_x, (taille.y - plateau_h) / 2.0 + (TILE_H / 2.0))
+	
+	queue_redraw()
 func _notification(what):
 	if what == NOTIFICATION_WM_SIZE_CHANGED:
 		_centrer_plateau()
