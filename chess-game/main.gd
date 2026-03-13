@@ -69,21 +69,32 @@ func _input(event):
 		elif event.is_action("sort_4"): index = 3
 		if index >= 0 and index < joueur_actif.sorts.size():
 			var sort = joueur_actif.sorts[index]
+
+			# -----------------------------------------------
+			# CAS SPÉCIAL : Dérobade avec marque active
+			# → Explosion IMMÉDIATE à la pression de la touche
+			# → 0 PM, pas de vérification CD
+			# -----------------------------------------------
+			if sort.id == "fripon_derobade" and joueur_actif.get("marque_cible") != null:
+				_exploser_marque_derobade(joueur_actif)
+				sort_selectionne = -1
+				renderer.sort_selectionne = -1
+				renderer.queue_redraw()
+				return
+
+			# Vérification CD — uniquement pour la POSE
 			if not sort.est_disponible():
-				# Exception Dérobade : disponible pour exploser si marque active
-				if sort.id == "fripon_derobade" and joueur_actif.get("marque_cible") != null:
-					pass  # On laisse passer
-				else:
-					print("Sort en recharge ! (", sort.cooldown_actuel, " tours restants)")
-					return
 				print("Sort en recharge ! (", sort.cooldown_actuel, " tours restants)")
 				return
+
 			if joueur_actif.gold < sort.cout_gold:
 				print("Pas assez de Gold pour ce sort !")
 				return
+
 			if joueur_actif.pm_actuels < sort.cout_pm:
 				print("Pas assez de PM ! (", sort.cout_pm, " requis, ", joueur_actif.pm_actuels, " restants)")
 				return
+
 			if sort_selectionne == index:
 				sort_selectionne = -1
 				print("Sort désélectionné")
@@ -208,22 +219,20 @@ func fin_de_tour():
 		_appliquer_effets_persistants(joueur_qui_finit)
 	
 	tour_manager.passer_au_tour_suivant()
-	
-	# Une seule déclaration — réutilisée pour l'explosion ET le renderer
 	var joueur_actif = tour_manager.get_joueur_actif()
-	
-	# Explosion de la marque Dérobade si le nouveau joueur actif en a une
-	if joueur_actif.get("marque_cible") != null:
-		_exploser_marque_derobade(joueur_actif)
-	
-	# Décrémente la marque Dérobade du joueur qui vient de jouer
+
+	# ❌ SUPPRIMÉ — plus d'explosion automatique au début du tour
+	# L'explosion est TOUJOURS manuelle (touche Z)
+
+	# Décrémente la marque du joueur qui VIENT DE JOUER
+	# (pas le nouveau joueur actif)
 	if joueur_qui_finit.get("marque_cible") != null:
 		joueur_qui_finit.marque_tours_restants -= 1
 		print("🎯 Marque — ", joueur_qui_finit.marque_tours_restants, " tour(s) avant expiration")
 		if joueur_qui_finit.marque_tours_restants <= 0:
 			joueur_qui_finit.marque_cible = null
-			print("🎯 Marque expirée — disparaît sans dégâts")
-			
+			print("🎯 Marque expirée sans dégâts")
+
 	print("--- Tour du Joueur ", tour_manager.index_joueur_actif + 1, " ---")
 	renderer.joueur_actif = joueur_actif
 	renderer.joueur_selectionne = false
@@ -526,26 +535,40 @@ func _utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) ->
 			joueur.grid_x = case_arrivee.x
 			joueur.grid_y = case_arrivee.y
 			board.occuper_case(joueur.grid_x, joueur.grid_y)
+
+			# La Ruée compte comme un déplacement → reset a_attaque_ce_tour
+			# Le Fripon peut donc réattaquer après une Ruée, comme après un déplacement classique
+			joueur.a_attaque_ce_tour = false
+
 			_appliquer_effet_case(joueur)
 			print("🗡️ Ruée — repositionné en (", case_arrivee.x, ",", case_arrivee.y, ")")
 			renderer.queue_redraw()
 			return true
 		"fripon_derobade":
-			if not cible:
-				print("La Dérobade nécessite une cible !")
-				return false
-			joueur.pm_actuels -= sort.cout_pm
-			sort.declencher_cooldown()
+			# -----------------------------------------------
+			# SORT DOUBLE : Dérobade / Explosion
+			# -----------------------------------------------
 
-			# Si marque déjà active → explosion immédiate
-			if joueur.marque_cible != null:
+			# === CAS EXPLOSION ===
+			# La marque est déjà active — on explose sur la cible marquée.
+			# Ce cas est géré directement dans _input() (touche immédiate).
+			# Ce bloc est ici en fallback de sécurité.
+			if joueur.get("marque_cible") != null:
 				_exploser_marque_derobade(joueur)
-				print("🎯 Explosion de la marque !")
-			else:
-				# Pose une nouvelle marque
-				joueur.marque_cible = cible
-				joueur.marque_tours_restants = 3
-				print("🎯 Marque posée sur ", cible.name, " — expire dans 3 tours")
+				return true
+
+			# === CAS POSE ===
+			# Pas de marque active → on en place une nouvelle.
+			if not cible:
+				print("Dérobade : une cible ennemie est requise pour poser la marque !")
+				return false
+
+			joueur.pm_actuels -= sort.cout_pm  # 2 PM à la pose
+			sort.declencher_cooldown()         # CD 2 tours — pour limiter la repose après expiration
+
+			joueur.marque_cible = cible
+			joueur.marque_tours_restants = 3   # Tours 2 et 3 = déclenchables, Tour 4 = expiration
+			print("🎯 Marque posée sur ", cible.name, " — 3 tours avant expiration (Touches : Z pour exploser)")
 			return true
 		"fripon_lame":
 			# Pas de cible — s'active sur soi-même
@@ -734,32 +757,36 @@ func _trouver_case_libre_pres(cible_x: int, cible_y: int, lanceur: Node) -> Vect
 # NE consomme PAS a_attaque_ce_tour
 func _exploser_marque_derobade(fripon: Node):
 	var cible = fripon.marque_cible
-	fripon.marque_cible = null  # Consomme la marque
+	fripon.marque_cible = null  # Consomme la marque immédiatement
+
+	# Sécurité : si la cible est morte ou non placée, on annule
 	if not cible.est_place or cible.est_mort:
 		print("🎯 Marque Dérobade — cible morte, pas d'explosion")
 		return
+
+	# --- Dégâts de base ---
 	var degats = 10 + fripon.bonus_degats_sorts
 	cible.recevoir_degats(degats)
 	fripon.gagner_gold_sur_degats(degats)
-	# Synergie Lame Empoisonnée — l'explosion déclenche le DoT si actif
-	if fripon.lame_active:
-		cible.ajouter_dot("lame_empoisonnee", 5, 3)
-		if not fripon.peut_attaquer(cible.grid_x, cible.grid_y):
-			fripon.lame_active = false
-		print("☠️ Lame + Dérobade — DoT appliqué !")
-	# Synergie Ruée — incrémente le compteur
-	fripon.attaques_depuis_ruee += 1
-	if not fripon.ruee_disponible and fripon.attaques_depuis_ruee >= 3:
-		fripon.ruee_disponible = true
-		print("🗡️ Ruée déverrouillée via explosion Dérobade !")
 	print("🎯 Explosion Dérobade ! ", degats, " dmg sur ", cible.name)
-	# L'explosion Dérobade déclenche aussi la Lame Empoisonnée
+
+	# --- Synergie Lame Empoisonnée ---
+	# L'explosion compte comme une attaque → déclenche la Lame si active
+	# ID unique pour permettre le cumul (même principe que fripon.attaquer)
 	if fripon.lame_active:
 		cible.recevoir_degats(10)
 		fripon.gagner_gold_sur_degats(10)
 		cible.ajouter_dot("lame_empoisonnee", 5, 3)
 		fripon.lame_active = false
-		print("☠️ Lame + Dérobade — +10 dmg + DoT !")
+		print("☠️ Lame + Dérobade — +10 dmg + DoT rafraîchi !")
+	
+	# --- Synergie Ruée — incrémente le compteur d'attaques ---
+	# NE consomme PAS a_attaque_ce_tour
+	fripon.attaques_depuis_ruee += 1
+	if not fripon.ruee_disponible and fripon.attaques_depuis_ruee >= 3:
+		fripon.ruee_disponible = true
+		print("🗡️ Ruée déverrouillée via explosion Dérobade !")
+
 	renderer.queue_redraw()
 
 func _get_joueur_en(x: int, y: int) -> Node:
