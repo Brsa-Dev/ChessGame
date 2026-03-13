@@ -29,11 +29,13 @@ func ajouter(message: String, couleur: Color = COULEUR_SYSTEME):
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD
 	label.add_theme_color_override("font_color", couleur)
 
-	# Message le plus récent EN HAUT
 	conteneur_messages.add_child(label)
 	conteneur_messages.move_child(label, 0)
 
-	# Supprime les messages excédentaires (les plus anciens = en bas)
-	while conteneur_messages.get_child_count() > MAX_MESSAGES:
-		var ancien = conteneur_messages.get_child(conteneur_messages.get_child_count() - 1)
-		ancien.queue_free()
+	# ✅ CORRECTION : on compte les enfants UNE FOIS
+	# et on supprime le dernier directement — pas de while infini
+	var count = conteneur_messages.get_child_count()
+	if count > MAX_MESSAGES:
+		var ancien = conteneur_messages.get_child(count - 1)
+		conteneur_messages.remove_child(ancien)  # Retire immédiatement (pas queue_free)
+		ancien.queue_free()                      # Libère la mémoire après

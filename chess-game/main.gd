@@ -10,6 +10,7 @@ extends Node2D
 @onready var shop_manager = $ShopManager
 @onready var shop_ui = $ShopUI
 @onready var log_ui = $UI/LogUI
+@onready var hud_ui = $HudUI
 
 var joueur_selectionne: bool = false
 var sort_selectionne: int = -1
@@ -23,6 +24,10 @@ var forets_temporaires: Array = []
 # -----------------------------------------------
 func _ready():
 	renderer.board = board
+	# Donne au HUD accès au board pour lire les types de cases
+	hud_ui.board = board
+	hud_ui.rafraichir([joueur1, joueur2, joueur3], tour_manager.get_joueur_actif())
+	
 	renderer.joueurs = [joueur1, joueur2, joueur3]
 	tour_manager.initialiser([joueur1, joueur2, joueur3])
 	renderer.joueur_actif = tour_manager.get_joueur_actif()
@@ -51,6 +56,15 @@ func _log(message: String, joueur: Node = null):
 	elif joueur == joueur3:
 		couleur = log_ui.COULEUR_J3
 	log_ui.ajouter(message, couleur)
+
+# -----------------------------------------------
+# _rafraichir_hud — Raccourci pour mettre à jour
+# le HUD après chaque action. Toujours appeler
+# cette fonction plutôt que hud_ui.rafraichir()
+# directement pour ne pas oublier les paramètres.
+# -----------------------------------------------
+func _rafraichir_hud():
+	hud_ui.rafraichir([joueur1, joueur2, joueur3], tour_manager.get_joueur_actif())
 # -----------------------------------------------
 # Boutique
 # -----------------------------------------------
@@ -137,6 +151,7 @@ func _input(event):
 				board.occuper_case(cell.x, cell.y)
 				joueur_actif.placer(cell.x, cell.y)
 				_log("📍 " + joueur_actif.name + " placé en (" + str(cell.x) + "," + str(cell.y) + ")", joueur_actif)
+				_rafraichir_hud()
 			else:
 				print("Case déjà occupée !")
 
@@ -185,6 +200,7 @@ func _input(event):
 				if joueur_actif.peut_attaquer(cell.x, cell.y):
 					joueur_actif.attaquer(cible)
 					_log("⚔️ " + joueur_actif.name + " attaque " + cible.name + " — " + str(joueur_actif.attaque_degats) + " dmg", joueur_actif)
+					_rafraichir_hud()
 					joueur_selectionne = false
 				else:
 					if joueur_actif.a_attaque_ce_tour:
@@ -215,6 +231,7 @@ func _input(event):
 					board.occuper_case(joueur_actif.grid_x, joueur_actif.grid_y)
 					joueur_selectionne = false
 					_log("🚶 " + joueur_actif.name + " → (" + str(cell.x) + "," + str(cell.y) + ") — PM : " + str(joueur_actif.pm_actuels), joueur_actif)
+					_rafraichir_hud()
 				else:
 					print("Case occupée !")
 			else:
@@ -253,6 +270,7 @@ func fin_de_tour():
 	renderer.joueur_actif = joueur_actif
 	renderer.joueur_selectionne = false
 	renderer.queue_redraw()
+	_rafraichir_hud()
 
 # -----------------------------------------------
 func _on_tour_global_termine(_numero_tour: int):
@@ -345,7 +363,7 @@ func _utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) ->
 			print("🧱 Mur créé en (", cible_x, ",", cible_y, ")")
 			renderer.queue_redraw()
 			_log("🧱 " + joueur.name + " crée un Mur en (" + str(cible_x) + "," + str(cible_y) + ")", joueur)
-			
+			_rafraichir_hud()
 			return true
 		"guerrier_hache":
 			joueur.gold -= sort.cout_gold
@@ -358,6 +376,7 @@ func _utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) ->
 				joueur.gagner_gold_sur_degats(degats)
 				print("🪓 Hache Empoisonnée ! ", degats, " dmg + DoT")
 				_log("🪓 " + joueur.name + " — Hache : " + str(degats) + " dmg + DoT sur " + cible.name, joueur)
+			_rafraichir_hud()
 			return true
 		"guerrier_bouclier":
 			if not cible:
@@ -374,12 +393,14 @@ func _utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) ->
 				joueur.gagner_gold_sur_degats(10)
 				print("💥 Impact mur ! +10 dmg")
 				_log("🛡️ " + joueur.name + " — Bouclier : " + str(degats) + " dmg + repousse " + cible.name, joueur)
+				_rafraichir_hud()
 		"guerrier_rage":
 			joueur.gold -= sort.cout_gold
 			joueur.pm_actuels -= sort.cout_pm
 			sort.declencher_cooldown()
 			joueur.activer_rage()
 			_log("⚔️ " + joueur.name + " — Rage Berserker ! x2 attaque, +2 PM", joueur)
+			_rafraichir_hud()
 			return true
 		# -----------------------------------------------
 		# SORT MAGE
@@ -394,6 +415,7 @@ func _utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) ->
 				joueur.gagner_gold_sur_degats(degats)
 				print("🔥 Boule de Feu ! ", degats, " dmg")
 				_log("🔥 " + joueur.name + " — Boule de Feu : " + str(degats) + " dmg sur " + cible.name, joueur)
+				_rafraichir_hud()
 			return true
 		"mage_gel":
 			if not cible:
@@ -404,6 +426,7 @@ func _utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) ->
 			cible.tours_immobilise = 2
 			print("❄️ Gel ! ", cible.name, " immobilisé 2 tours")
 			_log("❄️ " + joueur.name + " — Gel : " + cible.name + " immobilisé 2 tours", joueur)
+			_rafraichir_hud()
 			return true
 		"mage_meteore":
 			joueur.gold -= sort.cout_gold
@@ -414,6 +437,7 @@ func _utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) ->
 				"tours_restants": 2, "lanceur": joueur
 			})
 			print("☄️ Météore ! Impact dans 2 tours en (", cible_x, ",", cible_y, ")")
+			_rafraichir_hud()
 			return true
 		"mage_tempete":
 			joueur.gold -= sort.cout_gold
@@ -427,7 +451,8 @@ func _utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) ->
 				j.attaque_portee = max(0, j.attaque_portee - 2)
 				joueur.gagner_gold_sur_degats(degats)
 				print("⚡ Tempête ! ", degats, " dmg sur ", j.name)
-				_log("⚡ " + joueur.name + " — Tempête Arcanique sur tous les ennemis !", joueur)
+			_log("⚡ " + joueur.name + " — Tempête Arcanique sur tous les ennemis !", joueur)
+			_rafraichir_hud()
 			return true
 		# -----------------------------------------------
 		# SORT ARCHER
@@ -467,6 +492,7 @@ func _utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) ->
 			else:
 				print("🏹 Aucun ennemi à ≤2 cases — pas de rebond")
 			_log("🏹 " + joueur.name + " — Flèche : " + str(degats) + " dmg sur " + cible.name, joueur)
+			_rafraichir_hud()
 			return true
 		"archer_piege":
 			if cible:
@@ -482,6 +508,7 @@ func _utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) ->
 			pieges_actifs.append({"x": cible_x, "y": cible_y, "poseur": joueur})
 			print("🪤 Piège posé en (", cible_x, ",", cible_y, ") — invisible !")
 			_log("🪤 " + joueur.name + " pose un Piège en (" + str(cible_x) + "," + str(cible_y) + ")", joueur)
+			_rafraichir_hud()
 			return true
 		"archer_tir_cible":
 			if not cible:
@@ -499,6 +526,7 @@ func _utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) ->
 			joueur.gagner_gold_sur_degats(degats)
 			print("🏹 Tir Ciblé", " (forêt)" if cible_sur_foret else "", " ! ", degats, " dmg")
 			_log("🏹 " + joueur.name + " — Tir Ciblé : " + str(degats) + " dmg sur " + cible.name, joueur)
+			_rafraichir_hud()
 			return true
 		"archer_pluie":
 			joueur.gold -= sort.cout_gold
@@ -526,6 +554,7 @@ func _utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) ->
 			renderer.queue_redraw()
 			print("🌲 Pluie de Flèches ! ", cases_transformees.size(), " case(s) → Forêt")
 			_log("🏹 " + joueur.name + " — Pluie de Flèches en (" + str(cible_x) + "," + str(cible_y) + ")", joueur)
+			_rafraichir_hud()
 			return true
 		# -----------------------------------------------
 		# SORT FRIPON
@@ -572,6 +601,7 @@ func _utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) ->
 			print("🗡️ Ruée — repositionné en (", case_arrivee.x, ",", case_arrivee.y, ")")
 			renderer.queue_redraw()
 			_log("🗡️ " + joueur.name + " — Ruée vers (" + str(case_arrivee.x) + "," + str(case_arrivee.y) + ")", joueur)
+			_rafraichir_hud()
 			return true
 		"fripon_derobade":
 			# -----------------------------------------------
@@ -599,6 +629,7 @@ func _utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) ->
 			joueur.marque_tours_restants = 3   # Tours 2 et 3 = déclenchables, Tour 4 = expiration
 			print("🎯 Marque posée sur ", cible.name, " — 3 tours avant expiration (Touches : Z pour exploser)")
 			_log("🎯 " + joueur.name + " marque " + cible.name + " — expire dans 3 tours", joueur)
+			_rafraichir_hud()
 			return true
 		"fripon_lame":
 			# Pas de cible — s'active sur soi-même
@@ -607,6 +638,7 @@ func _utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) ->
 			joueur.lame_active = true
 			print("☠️ Lame Empoisonnée activée — prochaine attaque : +10 dmg + DoT")
 			_log("☠️ " + joueur.name + " — Lame Empoisonnée activée", joueur)
+			_rafraichir_hud()
 			return true
 		"fripon_frenesie":
 			joueur.gold       -= sort.cout_gold
@@ -615,6 +647,7 @@ func _utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) ->
 			joueur.frenesie_active = true
 			print("🔥 Frénésie ! Attaques illimitées à 0 PM jusqu'à fin de tour")
 			_log("🔥 " + joueur.name + " — Frénésie ! Attaques à 0 PM ce tour", joueur)
+			_rafraichir_hud()
 			return true
 	return false
 
@@ -801,6 +834,7 @@ func _exploser_marque_derobade(fripon: Node):
 	cible.recevoir_degats(degats)
 	fripon.gagner_gold_sur_degats(degats)
 	print("🎯 Explosion Dérobade ! ", degats, " dmg sur ", cible.name)
+	_log("🎯 Explosion ! " + str(degats) + " dmg sur " + cible.name, fripon)
 
 	# --- Synergie Lame Empoisonnée ---
 	# L'explosion compte comme une attaque → déclenche la Lame si active
