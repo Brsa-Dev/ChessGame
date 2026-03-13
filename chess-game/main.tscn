@@ -4,7 +4,7 @@
 [ext_resource type="Script" uid="uid://cx5ap1rwg6fkk" path="res://board.gd" id="2_0xm2m"]
 [ext_resource type="Script" uid="uid://d1c4gj8rey8gb" path="res://renderer.gd" id="3_h2yge"]
 [ext_resource type="Script" uid="uid://vx764si80mid" path="res://Classe/archer.gd" id="4_5vw27"]
-[ext_resource type="Script" uid="uid://ylfkw30jteip" path="res://Classe/fripon.gd" id="4_kek77"]
+[ext_resource type="Script" uid="uid://c1mg3hyujhvxw" path="res://Classe/guerrier.gd" id="4_ycdy4"]
 [ext_resource type="Script" uid="uid://dd545mykmfl8k" path="res://Classe/mage.gd" id="5_kek77"]
 [ext_resource type="Script" uid="uid://dwdhc37i2tort" path="res://tour_manager.gd" id="5_lquwl"]
 [ext_resource type="Script" uid="uid://gmarcgm6a54i" path="res://shop_manager.gd" id="6_272bh"]
@@ -12,6 +12,7 @@
 [ext_resource type="PackedScene" uid="uid://dsa25x38tnxyk" path="res://log_ui.tscn" id="8_4c57u"]
 [ext_resource type="Script" uid="uid://btmxatp242gy4" path="res://hud_ui.gd" id="11_efxa6"]
 [ext_resource type="Script" uid="uid://cwnxppdudkabl" path="res://event_manager.gd" id="12_dg77c"]
+[ext_resource type="Script" uid="uid://davtd4vv1xjqv" path="res://inventory_ui.gd" id="13_ycdy4"]
 
 [node name="Main" type="Node2D" unique_id=572728295]
 script = ExtResource("1_ig7tw")
@@ -23,7 +24,7 @@ script = ExtResource("2_0xm2m")
 script = ExtResource("3_h2yge")
 
 [node name="Joueur1" type="Node" parent="." unique_id=754179848]
-script = ExtResource("4_kek77")
+script = ExtResource("4_ycdy4")
 
 [node name="Joueur2" type="Node" parent="." unique_id=1933811520]
 script = ExtResource("5_kek77")
@@ -70,6 +71,9 @@ script = ExtResource("11_efxa6")
 
 [node name="EventManager" type="Node" parent="." unique_id=696540558]
 script = ExtResource("12_dg77c")
+
+[node name="InventoryUI" type="CanvasLayer" parent="." unique_id=695604500]
+script = ExtResource("13_ycdy4")
 
 [connection signal="timeout" from="TourManager/Timer" to="TourManager" method="_on_timer_timeout"]
 [connection signal="pressed" from="UI/BoutonFinTour" to="." method="fin_de_tour"]

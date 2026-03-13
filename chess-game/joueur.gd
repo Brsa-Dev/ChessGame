@@ -79,6 +79,36 @@ var sorts_en_attente: Array = []
 var marque_cible: Node = null
 var marque_tours_restants: int = 0  # Expiration après 3 tours
 
+
+# -----------------------------------------------
+# Variables pour les items de classe
+# -----------------------------------------------
+
+# ARCHER — Flèches Empoisonnées
+# true = la prochaine attaque de base appliquera un DoT
+# Reste actif jusqu'à utilisation (comme lame_active du Fripon)
+var fleches_empoisonnees_actif: bool = false
+
+# ARCHER — Piège Amélioré
+# true = les pièges posés immobilisent 2 tours au lieu de 1
+var piege_ameliore_actif: bool = false
+
+# ARCHER — Cape de Forêt
+# Nombre de charges restantes (max 2)
+var cape_foret_charges: int = 0
+
+# FRIPON — Ceinture de Pickpocket
+# true = chaque attaque de base vole 1 Gold à l'ennemi
+var pickpocket_actif: bool = false
+
+# FRIPON — Potion de Frénésie
+# Réduction du coût Gold de Frénésie (-1 Gold)
+var reduction_cout_frenesie: int = 0
+
+# MAGE — Cristal de Mana
+# Réduction permanente du coût Gold de Tempête Arcanique
+var reduction_cout_tempete: int = 0
+
 # -----------------------------------------------
 # Place le joueur sur une case de la grille
 # -----------------------------------------------

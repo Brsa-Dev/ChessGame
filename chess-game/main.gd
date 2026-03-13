@@ -12,6 +12,7 @@ extends Node2D
 @onready var log_ui = $UI/LogUI
 @onready var hud_ui = $HudUI
 @onready var event_manager = $EventManager
+@onready var inventory_ui = $InventoryUI
 
 var joueur_selectionne: bool = false
 var sort_selectionne: int = -1
@@ -70,6 +71,8 @@ func _ready():
 		taille_ecran.y - 45          # Collé en bas
 	))
 
+	inventory_ui  
+	
 	renderer.queue_redraw()
 	print("Main prêt !")
 
@@ -119,6 +122,13 @@ func _on_boutique_fermee():
 # -----------------------------------------------
 func _input(event):
 	if event is InputEventKey and event.pressed:
+		if event.keycode == KEY_F:
+			inventory_ui.toggle(tour_manager.get_joueur_actif())
+			return
+	if event is InputEventKey and event.pressed:
+		if event.keycode == KEY_F:
+			inventory_ui.toggle(tour_manager.get_joueur_actif())
+			return
 		var joueur_actif = tour_manager.get_joueur_actif()
 		if not joueur_selectionne:
 			return
@@ -230,6 +240,18 @@ func _input(event):
 				var cible = _get_joueur_en(cell.x, cell.y)
 				if joueur_actif.peut_attaquer(cell.x, cell.y):
 					joueur_actif.attaquer(cible)
+					# ← Flèches Empoisonnées (Archer)
+				if joueur_actif.fleches_empoisonnees_actif:
+					cible.ajouter_dot("fleches_empoisonnees", 5, 3)
+					joueur_actif.fleches_empoisonnees_actif = false
+					_log("🏹 Flèches Empoisonnées ! DoT appliqué sur " + cible.name, joueur_actif)
+
+				# ← Ceinture de Pickpocket (Fripon)
+				if joueur_actif.pickpocket_actif and cible.gold > 0:
+					cible.gold         -= 1
+					joueur_actif.gold  += 1
+					_log("👜 " + joueur_actif.name + " vole 1 Gold à " + cible.name + " !", joueur_actif)
+	
 					_log("⚔️ " + joueur_actif.name + " attaque " + cible.name + " — " + str(joueur_actif.attaque_degats) + " dmg", joueur_actif)
 					_rafraichir_hud()
 					joueur_selectionne = false
@@ -551,6 +573,10 @@ func _utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) ->
 			_rafraichir_hud()
 			return true
 		"mage_tempete":
+			var cout_tempete = max(0, sort.cout_gold - joueur.reduction_cout_tempete)
+			if joueur.gold < cout_tempete:
+				print("Pas assez de Gold pour Tempête !")
+				return false
 			joueur.gold -= sort.cout_gold
 			joueur.pm_actuels -= sort.cout_pm
 			sort.declencher_cooldown()
@@ -752,6 +778,11 @@ func _utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) ->
 			_rafraichir_hud()
 			return true
 		"fripon_frenesie":
+			# ← Potion de Frénésie réduit le coût
+			var cout_frenesie = max(0, sort.cout_gold - joueur.reduction_cout_frenesie)
+			if joueur.gold < cout_frenesie:
+				print("Pas assez de Gold !")
+				return false
 			joueur.gold       -= sort.cout_gold
 			joueur.pm_actuels -= sort.cout_pm
 			sort.declencher_cooldown()
@@ -831,11 +862,10 @@ func _verifier_pieges(joueur: Node):
 	for piege in pieges_actifs:
 		if piege["x"] == joueur.grid_x and piege["y"] == joueur.grid_y and piege["poseur"] != joueur:
 			joueur.recevoir_degats(10)
-			joueur.tours_immobilise = 1
+			# ← Piège Amélioré : 2 tours si le poseur a l'item
+			joueur.tours_immobilise = 2 if piege["poseur"].piege_ameliore_actif else 1
 			pieges_declenches.append(piege)
-			print("🪤 Piège déclenché ! 10 dmg + immobilisé 1 tour")
-			# ← AJOUTE ICI
-			_log("🪤 " + joueur.name + " déclenche un piège ! 10 dmg + immobilisé 1 tour", joueur)
+			_log("🪤 " + joueur.name + " déclenche un piège ! 10 dmg + immobilisé " + str(joueur.tours_immobilise) + " tour(s)", joueur)
 	for piege in pieges_declenches:
 		pieges_actifs.erase(piege)
 

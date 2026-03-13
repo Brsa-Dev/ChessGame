@@ -62,25 +62,21 @@ func _rafraichir_gold():
 # On vide d'abord le conteneur pour éviter les doublons
 # -----------------------------------------------
 func _afficher_items():
-	# Supprime les anciens boutons
 	for enfant in conteneur_items.get_children():
 		enfant.queue_free()
-	
-	# Crée un bouton pour chaque item du stock
-	for item in shop_manager.stock:
+
+	# ← Récupère les items filtrés par classe du joueur actif
+	var items_visibles = shop_manager.get_stock_pour_joueur(joueur_actif)
+
+	for item in items_visibles:
 		var bouton = Button.new()
-		
-		# Texte du bouton : nom + prix + description
-		bouton.text = "%s — %d Gold\n%s" % [item.nom, item.prix, item.description]
+		# Préfixe classe pour les items non-communs
+		var prefix = "" if item.classe_requise == "" else "[" + item.classe_requise.capitalize() + "] "
+		bouton.text = "%s%s — %d Gold\n%s" % [prefix, item.nom, item.prix, item.description]
 		bouton.autowrap_mode = TextServer.AUTOWRAP_WORD
 		bouton.custom_minimum_size = Vector2(300, 60)
-		
-		# Grise le bouton si le joueur ne peut pas acheter
 		bouton.disabled = not shop_manager.peut_acheter(joueur_actif, item)
-		
-		# Connecte le clic — on passe l'item en paramètre
 		bouton.pressed.connect(_on_acheter.bind(item))
-		
 		conteneur_items.add_child(bouton)
 
 # -----------------------------------------------

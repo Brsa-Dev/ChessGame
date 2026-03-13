@@ -17,8 +17,11 @@ var stock: Array = []
 # Recharge le stock avec les 5 items communs
 # -----------------------------------------------
 func ouvrir_boutique():
+	# Le stock est rechargé à chaque ouverture
+	# Les items de classe sont chargés dynamiquement dans shop_ui.gd
+	# selon la classe du joueur actif
 	stock = ItemScript.get_items_communs()
-	print("=== Boutique ouverte ! ", stock.size(), " items disponibles ===")
+	print("=== Boutique ouverte ! ", stock.size(), " items communs ===")
 
 # -----------------------------------------------
 # Vérifie si un joueur peut acheter un item
@@ -102,3 +105,124 @@ func appliquer_effet(joueur: Node, item: Resource):
 			# +8 Gold immédiat
 			joueur.gold += 8
 			print("Élixir de Gold — Gold : ", joueur.gold)
+
+		# -----------------------------------------------
+		# ITEMS GUERRIER
+		# -----------------------------------------------
+		"epee_renforcee":
+			joueur.attaque_degats += 10
+			print("⚔️ Épée Renforcée — attaque : ", joueur.attaque_degats)
+
+		"armure_lourde":
+			# Même système que l'Amulette — cumulable
+			joueur.resistance_degats += 0.20
+			print("🛡️ Armure Lourde — résistance : ", joueur.resistance_degats * 100, "%")
+
+		"pierre_rage":
+			# Réduit le CD actuel de Rage Berserker de 1
+			# Si CD = 0, aucun effet (sort déjà disponible)
+			for sort in joueur.sorts:
+				if sort.id == "guerrier_rage":
+					sort.cooldown_actuel = max(0, sort.cooldown_actuel - 1)
+					print("⚔️ Pierre de Rage — CD Rage : ", sort.cooldown_actuel)
+					break
+
+		"bandage":
+			# Réduit TOUS les DoT actifs de 1 tour
+			for source_id in joueur.dots_actifs:
+				joueur.dots_actifs[source_id]["tours_restants"] -= 1
+			# Supprime les DoT expirés
+			var a_supprimer = []
+			for source_id in joueur.dots_actifs:
+				if joueur.dots_actifs[source_id]["tours_restants"] <= 0:
+					a_supprimer.append(source_id)
+			for s in a_supprimer:
+				joueur.dots_actifs.erase(s)
+			print("🩹 Bandage — DoT réduits de 1 tour")
+
+		# -----------------------------------------------
+		# ITEMS MAGE
+		# -----------------------------------------------
+		"baton_arcanique":
+			joueur.bonus_degats_sorts += 10
+			print("🔮 Bâton Arcanique — bonus sorts : +", joueur.bonus_degats_sorts)
+
+		"tome_glace":
+			for sort in joueur.sorts:
+				if sort.id == "mage_gel":
+					sort.cooldown_actuel = max(0, sort.cooldown_actuel - 1)
+					print("❄️ Tome de Glace — CD Gel : ", sort.cooldown_actuel)
+					break
+
+		"cristal_mana":
+			# Réduction permanente du coût Gold de Tempête Arcanique
+			joueur.reduction_cout_tempete += 2
+			print("💎 Cristal de Mana — Tempête coûte ", 2 - joueur.reduction_cout_tempete, " Gold de moins")
+
+		"robe_enchantee":
+			joueur.hp_max     += 20
+			joueur.hp_actuels += 20  # Effet immédiat aussi
+			print("👘 Robe Enchantée — HP max : ", joueur.hp_max)
+
+		# -----------------------------------------------
+		# ITEMS ARCHER
+		# -----------------------------------------------
+		"arc_long":
+			joueur.attaque_portee  += 1
+			joueur.bonus_range_sorts += 1
+			print("🏹 Arc Long — portée : ", joueur.attaque_portee)
+
+		"fleches_empoisonnees":
+			# Active l'état — la prochaine attaque de base appliquera un DoT
+			joueur.fleches_empoisonnees_actif = true
+			print("🏹 Flèches Empoisonnées activées")
+
+		"piege_ameliore":
+			joueur.piege_ameliore_actif = true
+			print("🪤 Piège Amélioré — immobilisation 2 tours")
+
+		"cape_foret":
+			joueur.cape_foret_charges += 2
+			print("🌲 Cape de Forêt — 2 charges")
+
+		# -----------------------------------------------
+		# ITEMS FRIPON
+		# -----------------------------------------------
+		"dague_aceree":
+			joueur.attaque_degats += 5
+			print("🗡️ Dague Acérée — attaque : ", joueur.attaque_degats)
+
+		"ceinture_pickpocket":
+			joueur.pickpocket_actif = true
+			print("👜 Ceinture de Pickpocket activée")
+
+		"bottes_silencieuses":
+			joueur.pm_max     += 2
+			joueur.pm_actuels += 2
+			print("👢 Bottes Silencieuses — PM max : ", joueur.pm_max)
+
+		"potion_frenesie":
+			joueur.reduction_cout_frenesie += 1
+			print("🍶 Potion de Frénésie — Frénésie coûte 1 Gold de moins")
+
+# -----------------------------------------------
+# get_stock_pour_joueur — Retourne les items
+# visibles pour un joueur donné :
+# items communs + items de sa classe
+# -----------------------------------------------
+func get_stock_pour_joueur(joueur: Node) -> Array:
+	var classe = _get_classe(joueur)
+	var items_classe = ItemScript.get_items_classe(classe)
+	return stock + items_classe
+
+# -----------------------------------------------
+# _get_classe — Lit le script du joueur pour
+# déterminer sa classe (même logique que hud_ui.gd)
+# -----------------------------------------------
+func _get_classe(joueur: Node) -> String:
+	var path = joueur.get_script().resource_path
+	if "fripon"   in path: return "fripon"
+	if "mage"     in path: return "mage"
+	if "guerrier" in path: return "guerrier"
+	if "archer"   in path: return "archer"
+	return ""
