@@ -13,6 +13,9 @@
 [ext_resource type="Script" uid="uid://btmxatp242gy4" path="res://hud_ui.gd" id="11_efxa6"]
 [ext_resource type="Script" uid="uid://cwnxppdudkabl" path="res://event_manager.gd" id="12_dg77c"]
 [ext_resource type="Script" uid="uid://davtd4vv1xjqv" path="res://inventory_ui.gd" id="13_ycdy4"]
+[ext_resource type="Script" uid="uid://darc5cq3vg68f" path="res://Handlers/effects_handler.gd" id="14_2cqfq"]
+[ext_resource type="Script" uid="uid://cxoxcul65k54d" path="res://Handlers/sort_handler.gd" id="15_yaehf"]
+[ext_resource type="Script" uid="uid://b3b0giv8gmrun" path="res://Handlers/input_handler.gd" id="16_074og"]
 
 [node name="Main" type="Node2D" unique_id=572728295]
 script = ExtResource("1_ig7tw")
@@ -74,6 +77,17 @@ script = ExtResource("12_dg77c")
 
 [node name="InventoryUI" type="CanvasLayer" parent="." unique_id=695604500]
 script = ExtResource("13_ycdy4")
+
+[node name="Handlers" type="Node" parent="." unique_id=950920928]
+
+[node name="EffectsHandler" type="Node" parent="Handlers" unique_id=703154545]
+script = ExtResource("14_2cqfq")
+
+[node name="SortHandler" type="Node" parent="Handlers" unique_id=2139663806]
+script = ExtResource("15_yaehf")
+
+[node name="InputHandler" type="Node" parent="Handlers" unique_id=278738024]
+script = ExtResource("16_074og")
 
 [connection signal="timeout" from="TourManager/Timer" to="TourManager" method="_on_timer_timeout"]
 [connection signal="pressed" from="UI/BoutonFinTour" to="." method="fin_de_tour"]

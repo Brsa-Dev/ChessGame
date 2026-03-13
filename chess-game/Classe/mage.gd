@@ -1,28 +1,36 @@
-# Classes/mage.gd
-# -----------------------------------------------
-# MAGE — Classe à distance / sorts
-# Passif : +5 dégâts sur tous les sorts
-# Attaque : 10 dégâts, portée 5, coût 1 PM
-# ⚠️ 80 HP seulement
-# -----------------------------------------------
+# =======================================================
+# Classe/mage.gd
+# -------------------------------------------------------
+# Classe Mage — dégâts de zone et contrôle.
+#
+# Spécialités :
+#   - Faible en HP (80), grande portée d'attaque (5)
+#   - Bonus dégâts sorts (+5)
+#   - Sorts : Boule de Feu, Gel, Météore, Tempête
+# =======================================================
 extends "res://joueur.gd"
 
-func _ready():
-	# --- Stats spécifiques au Mage ---
-	hp_max = 80            # Plus fragile
-	hp_actuels = 80
-	attaque_degats = 10
-	attaque_portee = 5     # Très longue portée
-	attaque_cout_pm = 1
+# -------------------------------------------------------
+# Constantes — stats de base du Mage
+# -------------------------------------------------------
+const MAGE_HP_MAX            : int = 80
+const MAGE_ATTAQUE_DEGATS    : int = 10
+const MAGE_ATTAQUE_PORTEE    : int = 5
+const MAGE_COUT_PM           : int = 1
+const MAGE_BONUS_DEGATS_SORTS: int = 5  # Bonus flat sur tous les sorts offensifs
 
-	# Le passif est stocké ici — utilisé dans les sorts
-	# (branché dans sort.gd à l'Étape 7b)
-	bonus_degats_sorts = 5
-	
+
+func _ready() -> void:
+	hp_max             = MAGE_HP_MAX
+	hp_actuels         = MAGE_HP_MAX
+	attaque_degats     = MAGE_ATTAQUE_DEGATS
+	attaque_portee     = MAGE_ATTAQUE_PORTEE
+	attaque_cout_pm    = MAGE_COUT_PM
+	bonus_degats_sorts = MAGE_BONUS_DEGATS_SORTS
+
 	const SortsScript = preload("res://Classe/Sort/mage_sorts.gd")
 	sorts = SortsScript.creer_sorts()
 
-func utiliser_passif():
-	# Le passif s'applique automatiquement dans chaque sort
-	# via la variable bonus_degats_sorts
+
+func utiliser_passif() -> void:
 	pass
