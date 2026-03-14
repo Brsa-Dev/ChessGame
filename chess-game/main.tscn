@@ -16,6 +16,7 @@
 [ext_resource type="Script" uid="uid://darc5cq3vg68f" path="res://Handlers/effects_handler.gd" id="14_2cqfq"]
 [ext_resource type="Script" uid="uid://cxoxcul65k54d" path="res://Handlers/sort_handler.gd" id="15_yaehf"]
 [ext_resource type="Script" uid="uid://b3b0giv8gmrun" path="res://Handlers/input_handler.gd" id="16_074og"]
+[ext_resource type="PackedScene" uid="uid://b8rphx2pexhby" path="res://UI/game_over_ui.tscn" id="17_yaehf"]
 
 [node name="Main" type="Node2D" unique_id=572728295]
 script = ExtResource("1_ig7tw")
@@ -90,6 +91,8 @@ script = ExtResource("15_yaehf")
 
 [node name="InputHandler" type="Node" parent="Handlers" unique_id=278738024]
 script = ExtResource("16_074og")
+
+[node name="GameOverUi" parent="." unique_id=977531849 instance=ExtResource("17_yaehf")]
 
 [connection signal="timeout" from="TourManager/Timer" to="TourManager" method="_on_timer_timeout"]
 [connection signal="pressed" from="UI/BoutonFinTour" to="." method="fin_de_tour"]

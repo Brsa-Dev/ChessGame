@@ -1,0 +1,43 @@
+[gd_scene format=3 uid="uid://b8rphx2pexhby"]
+
+[ext_resource type="Script" uid="uid://vyofdtrdjx0t" path="res://UI/game_over_ui.gd" id="1_t05f7"]
+
+[node name="GameOverUi" type="CanvasLayer" unique_id=977531849]
+script = ExtResource("1_t05f7")
+
+[node name="ColorRect" type="ColorRect" parent="." unique_id=238153609]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0.22352941, 1)
+
+[node name="CenterContainer" type="CenterContainer" parent="." unique_id=2066253785]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer" unique_id=1761153847]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="LabelTitre" type="Label" parent="CenterContainer/VBoxContainer" unique_id=2128932385]
+layout_mode = 2
+theme_override_font_sizes/font_size = 36
+text = "🏆 ... gagne la partie !"
+horizontal_alignment = 1
+
+[node name="BoutonRejouer" type="Button" parent="CenterContainer/VBoxContainer" unique_id=1118143590]
+custom_minimum_size = Vector2(200, 50)
+layout_mode = 2
+text = "🔄 Rejouer"
+
+[node name="BoutonQuitter" type="Button" parent="CenterContainer/VBoxContainer" unique_id=224161186]
+custom_minimum_size = Vector2(200, 50)
+layout_mode = 2
+text = "🚪 Quitter"
+
+[connection signal="pressed" from="CenterContainer/VBoxContainer/BoutonRejouer" to="." method="_on_rejouer"]

@@ -28,6 +28,7 @@ extends Node2D
 @onready var log_ui          : Node = $UI/LogUI
 @onready var hud_ui          : Node = $HudUI
 @onready var inventory_ui    : Node = $InventoryUI
+@onready var game_over_ui    : Node = $GameOverUI
 @onready var bouton_fin_tour : Node = $UI/BoutonFinTour
 
 # -------------------------------------------------------
@@ -285,10 +286,55 @@ func _on_boutique_fermee() -> void:
 
 
 func _on_joueur_mort(joueur: Node) -> void:
+	# Libère la case occupée par le joueur mort
 	board.liberer_case(joueur.grid_x, joueur.grid_y)
 	_log("💀 %s est éliminé !" % joueur.name)
 	renderer.queue_redraw()
 
+	# Vérifie si la partie est terminée après chaque mort
+	_verifier_victoire()
+
+
+# -------------------------------------------------------
+# Compte les joueurs encore en vie.
+# Si un seul survit → la partie est terminée.
+# -------------------------------------------------------
+func _verifier_victoire() -> void:
+	# Filtre la liste pour ne garder que les joueurs vivants et placés
+	var survivants : Array = _joueurs.filter(
+		func(j: Node) -> bool:
+			return j.est_place and not j.est_mort
+	)
+
+	# La partie continue tant qu'il reste 2 joueurs ou plus
+	if survivants.size() > 1:
+		return
+
+	# --- 1 survivant → vainqueur désigné ---
+	if survivants.size() == 1:
+		var vainqueur : Node = survivants[0]
+		_log("🏆 %s remporte la partie !" % vainqueur.name)
+		# Désactive les inputs pour éviter que le dernier joueur
+		# puisse encore jouer pendant que l'écran de fin s'affiche
+		bouton_fin_tour.disabled = true
+		input_handler.boutique_ouverte = true  # bloque les inputs clavier/souris
+		game_over_ui.afficher(vainqueur)
+		return
+
+	# --- 0 survivant → cas extrêmement rare (mort simultanée via DoT) ---
+	# On affiche quand même un écran de fin sans vainqueur
+	_log("💀 Tous les joueurs sont éliminés — Match nul !")
+	bouton_fin_tour.disabled       = true
+	input_handler.boutique_ouverte = true
+	_label_titre_si_nul()
+
+# -------------------------------------------------------
+# Cas du match nul — on réutilise game_over_ui mais
+# avec un message différent.
+# -------------------------------------------------------
+func _label_titre_si_nul() -> void:
+	game_over_ui._label_titre.text = "💀 Match nul — Tous éliminés !"
+	game_over_ui.visible = true
 
 func _on_evenement_declenche(nom: String) -> void:
 	match nom:
