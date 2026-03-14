@@ -41,3 +41,4 @@ layout_mode = 2
 text = "🚪 Quitter"
 
 [connection signal="pressed" from="CenterContainer/VBoxContainer/BoutonRejouer" to="." method="_on_rejouer"]
+[connection signal="pressed" from="CenterContainer/VBoxContainer/BoutonQuitter" to="." method="_on_quitter"]

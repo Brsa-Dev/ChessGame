@@ -28,7 +28,7 @@ extends Node2D
 @onready var log_ui          : Node = $UI/LogUI
 @onready var hud_ui          : Node = $HudUI
 @onready var inventory_ui    : Node = $InventoryUI
-@onready var game_over_ui    : Node = $GameOverUI
+@onready var game_over_ui    : Node = $GameOverUi
 @onready var bouton_fin_tour : Node = $UI/BoutonFinTour
 
 # -------------------------------------------------------

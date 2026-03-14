@@ -1,0 +1,49 @@
+[gd_scene format=3 uid="uid://cnyrhgghr12l4"]
+
+[ext_resource type="PackedScene" uid="uid://cqkgyta1gdvgt" path="res://Assets/Cases/case_tour.glb" id="1_8wqhx"]
+[ext_resource type="PackedScene" uid="uid://cb2brkf3bcq7r" path="res://Assets/Cases/case_lave.glb" id="2_8om2v"]
+[ext_resource type="PackedScene" uid="uid://dm4qiqprp332d" path="res://Assets/Cases/case_eau.glb" id="3_5suet"]
+[ext_resource type="PackedScene" uid="uid://o0p4bbw0ouhb" path="res://Assets/Cases/case_foret.glb" id="4_vt8f4"]
+[ext_resource type="PackedScene" uid="uid://dwh7xr06gjfgo" path="res://Assets/Cases/case_mur.glb" id="5_ksan8"]
+[ext_resource type="PackedScene" uid="uid://v0s3iyhdi5px" path="res://Assets/Cases/case_normal_black.glb" id="6_ksan8"]
+[ext_resource type="PackedScene" uid="uid://dyak1hwr7lv1l" path="res://Assets/Cases/case_normal_white.glb" id="7_4vq04"]
+[ext_resource type="PackedScene" uid="uid://chjb2pnoe8lsq" path="res://Assets/Personnages/pion_blanc.glb" id="8_ix0es"]
+[ext_resource type="PackedScene" uid="uid://bkw530tskkgqm" path="res://Assets/Personnages/pion_noir.glb" id="9_wa6xy"]
+
+[node name="TestAssets" type="Node3D" unique_id=77294035]
+
+[node name="Camera" type="Camera3D" parent="." unique_id=1012628926]
+transform = Transform3D(0.70710677, -0.49999997, 0.49999997, 0, 0.70710677, 0.70710677, -0.70710677, -0.49999997, 0.49999997, 10, 10, 10)
+projection = 1
+size = 20.644823
+
+[node name="Lumiere" type="DirectionalLight3D" parent="." unique_id=1937251026]
+transform = Transform3D(-0.0046598017, -0.9703124, -0.24181, 0.77512157, -0.1562824, 0.61217844, -0.631795, -0.18457948, 0.7528384, -0.98823047, 13.652905, 19.853569)
+shadow_enabled = true
+
+[node name="case_eau2" parent="." unique_id=346228264 instance=ExtResource("3_5suet")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, -3)
+
+[node name="case_foret2" parent="." unique_id=1951673696 instance=ExtResource("4_vt8f4")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, -2)
+
+[node name="case_lave2" parent="." unique_id=1798539185 instance=ExtResource("2_8om2v")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, -1)
+
+[node name="case_mur2" parent="." unique_id=134730218 instance=ExtResource("5_ksan8")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
+
+[node name="case_tour" parent="." unique_id=1263163629 instance=ExtResource("1_8wqhx")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 3)
+
+[node name="case_normal_black2" parent="." unique_id=1996156576 instance=ExtResource("6_ksan8")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 1)
+
+[node name="case_normal_white" parent="." unique_id=203559133 instance=ExtResource("7_4vq04")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 2)
+
+[node name="pion_blanc" parent="." unique_id=968074270 instance=ExtResource("8_ix0es")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0, 1)
+
+[node name="pion_noir" parent="." unique_id=984430108 instance=ExtResource("9_wa6xy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0, 2)

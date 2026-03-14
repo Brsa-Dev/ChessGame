@@ -1,35 +1,24 @@
 # =======================================================
 # UI/game_over_ui.gd
-# -------------------------------------------------------
-# Écran de fin de partie.
-# La structure visuelle est dans game_over_ui.tscn —
-# ce script ne gère que la logique (affichage + boutons).
 # =======================================================
 extends CanvasLayer
 
-
-# -------------------------------------------------------
-# Références aux nœuds de la scène — assignées
-# automatiquement grâce aux chemins dans main.tscn
-# -------------------------------------------------------
-@onready var _label_titre  : Label  = $CenterContainer/VBoxContainer/LabelTitre
-@onready var _btn_rejouer  : Button = $CenterContainer/VBoxContainer/BoutonRejouer
-@onready var _btn_quitter  : Button = $CenterContainer/VBoxContainer/BoutonQuitter
-
+@onready var _label_titre : Label = $CenterContainer/VBoxContainer/LabelTitre
 
 # =======================================================
 # INITIALISATION
 # =======================================================
 func _ready() -> void:
-	# Connecte les boutons à leurs callbacks
-	_btn_rejouer.pressed.connect(_on_rejouer)
-	_btn_quitter.pressed.connect(_on_quitter)
+	# Force le masquage au démarrage — le CanvasLayer est visible
+	# par défaut dans Godot, ce qui ferait réapparaître l'écran
+	# immédiatement après un reload_current_scene().
+	# Les boutons sont connectés directement dans l'éditeur (game_over_ui.tscn),
+	# donc on ne les connecte PAS ici pour éviter le double appel.
+	visible = false
 
 
 # =======================================================
-# API PUBLIQUE
-# -------------------------------------------------------
-# Appelée par main.gd quand un vainqueur est désigné.
+# API PUBLIQUE — Appelée par main.gd
 # =======================================================
 func afficher(vainqueur: Node) -> void:
 	_label_titre.text = "🏆 %s gagne la partie !" % vainqueur.name
@@ -37,18 +26,12 @@ func afficher(vainqueur: Node) -> void:
 
 
 # =======================================================
-# CALLBACKS BOUTONS
+# CALLBACKS — Connectés via l'éditeur dans game_over_ui.tscn
 # =======================================================
 
-# -------------------------------------------------------
-# Recharge toute la scène — remet TOUT à zéro.
-# -------------------------------------------------------
 func _on_rejouer() -> void:
 	get_tree().reload_current_scene()
 
 
-# -------------------------------------------------------
-# Ferme l'application proprement.
-# -------------------------------------------------------
 func _on_quitter() -> void:
 	get_tree().quit()
