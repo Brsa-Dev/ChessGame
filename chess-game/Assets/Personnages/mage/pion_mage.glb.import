@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://cfqhap8ird33e"
-path="res://.godot/imported/bouclier.glb-8bb8b9963bb4501ce6b1f8e49da1a877.scn"
+uid="uid://bbi0ljs06bkej"
+path="res://.godot/imported/pion_mage.glb-fffd7072146a7cb61e5981f94b4559e3.scn"
 
 [deps]
 
-source_file="res://Assets/Personnages/guerrier/bouclier.glb"
-dest_files=["res://.godot/imported/bouclier.glb-8bb8b9963bb4501ce6b1f8e49da1a877.scn"]
+source_file="res://Assets/Personnages/mage/pion_mage.glb"
+dest_files=["res://.godot/imported/pion_mage.glb-fffd7072146a7cb61e5981f94b4559e3.scn"]
 
 [params]
 

@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://cgyyd2hdjewoh"
-path="res://.godot/imported/grimoire.glb-3861ba6dd90951b1590a0c9ba5bcc73c.scn"
+uid="uid://c7qewtp44opgp"
+path="res://.godot/imported/pion_archer.glb-47b0f90333db6661df594a2c48364aa4.scn"
 
 [deps]
 
-source_file="res://Assets/Personnages/mage/grimoire.glb"
-dest_files=["res://.godot/imported/grimoire.glb-3861ba6dd90951b1590a0c9ba5bcc73c.scn"]
+source_file="res://Assets/Personnages/archer/pion_archer.glb"
+dest_files=["res://.godot/imported/pion_archer.glb-47b0f90333db6661df594a2c48364aa4.scn"]
 
 [params]
 

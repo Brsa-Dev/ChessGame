@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://c8vbjeurru7ts"
-path="res://.godot/imported/carquois.glb-bcf6b7e1f7719d2596d7f658afb5eb94.scn"
+uid="uid://bodo6q7fpuvci"
+path="res://.godot/imported/pion_guerrier.glb-02212aeca3fcbe36b5a530bc09fa48fe.scn"
 
 [deps]
 
-source_file="res://Assets/Personnages/archer/carquois.glb"
-dest_files=["res://.godot/imported/carquois.glb-bcf6b7e1f7719d2596d7f658afb5eb94.scn"]
+source_file="res://Assets/Personnages/guerrier/pion_guerrier.glb"
+dest_files=["res://.godot/imported/pion_guerrier.glb-02212aeca3fcbe36b5a530bc09fa48fe.scn"]
 
 [params]
 

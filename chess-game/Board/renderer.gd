@@ -323,6 +323,92 @@ func screen_to_grid(pos: Vector2) -> Vector2i:
 	return Vector2i(gx, gy)
 
 
+# -------------------------------------------------------
+# Calcule toutes les cases réellement atteignables depuis
+# la position (jx, jy) avec pm_disponibles PM.
+#
+# Utilise un BFS (Breadth-First Search) qui explore les cases
+# adjacentes une par une — simule le déplacement case par case.
+#
+# Un MUR ou VIDE sur le chemin bloque TOUTES les cases derrière.
+# Une case Forêt coûte 2 PM au lieu de 1.
+# Les cases occupées ne sont pas atteignables mais ne bloquent
+# PAS le chemin — on peut longer un joueur sans passer dessus.
+#
+# Retourne un dictionnaire "x,y" → coût PM pour y arriver.
+# -------------------------------------------------------
+func _calculer_cases_accessibles(jx: int, jy: int, pm_disponibles: int) -> Dictionary:
+	# Dictionnaire des cases atteignables : "x,y" → coût PM pour y arriver
+	var atteignables : Dictionary = {}
+
+	# File BFS : chaque entrée est [x, y, pm_consommes]
+	var file : Array = [[jx, jy, 0]]
+
+	# Cases déjà visitées pour éviter les boucles
+	var visites : Dictionary = {}
+	visites["%d,%d" % [jx, jy]] = true
+
+	# Directions cardinales (haut, bas, gauche, droite)
+	# Pas de diagonales — déplacement case par case
+	const DIRECTIONS : Array = [
+		Vector2i( 1,  0),
+		Vector2i(-1,  0),
+		Vector2i( 0,  1),
+		Vector2i( 0, -1),
+	]
+
+	while not file.is_empty():
+		var courant : Array = file.pop_front()
+		var cx      : int   = courant[0]
+		var cy      : int   = courant[1]
+		var pm_used : int   = courant[2]
+
+		for dir in DIRECTIONS:
+			var nx  : int    = cx + dir.x
+			var ny  : int    = cy + dir.y
+			var cle : String = "%d,%d" % [nx, ny]
+
+			# Hors plateau
+			if nx < 0 or nx >= TAILLE_PLATEAU or ny < 0 or ny >= TAILLE_PLATEAU:
+				continue
+
+			# Déjà visité avec un coût inférieur ou égal
+			if visites.has(cle):
+				continue
+
+			var type_case : int = board.get_case(nx, ny)
+
+			# Cases infranchissables — bloquent le chemin
+			if type_case == 3 or type_case == 5:  # VIDE ou MUR
+				continue
+
+			# Coût pour entrer dans cette case
+			# Forêt = 2 PM, toutes les autres = 1 PM
+			var cout : int = 2 if type_case == 4 else 1  # 4 = FORET
+
+			var nouveau_pm : int = pm_used + cout
+
+			# Dépasse les PM disponibles
+			if nouveau_pm > pm_disponibles:
+				continue
+
+			# Marque comme visité
+			visites[cle] = true
+
+			# Case occupée par un joueur : on peut longer mais pas s'arrêter.
+			# On l'ajoute à la file pour continuer l'exploration,
+			# mais PAS dans atteignables (on ne peut pas s'y arrêter).
+			if board.case_occupee(nx, ny):
+				file.append([nx, ny, nouveau_pm])
+				continue
+
+			# Case atteignable et libre
+			atteignables[cle] = nouveau_pm
+			file.append([nx, ny, nouveau_pm])
+
+	return atteignables
+
+
 # =======================================================
 # JOUEURS — Affichage des pions 3D
 # =======================================================
@@ -441,39 +527,20 @@ func _mettre_a_jour_surbrillances() -> void:
 
 # -------------------------------------------------------
 # Surbrillance jaune — cases accessibles en déplacement.
-# Reproduit la logique de l'ancienne _dessiner_surbrillance_deplacement().
+# Utilise le BFS pour ne montrer que les cases vraiment
+# atteignables (obstacles et coût forêt pris en compte).
 # -------------------------------------------------------
 func _afficher_surbrillance_deplacement() -> void:
-	var pm : int = joueur_actif.pm_actuels
-	var jx : int = joueur_actif.grid_x
-	var jy : int = joueur_actif.grid_y
+	# BFS depuis la position du joueur avec ses PM restants
+	var cases : Dictionary = _calculer_cases_accessibles(
+		joueur_actif.grid_x,
+		joueur_actif.grid_y,
+		joueur_actif.pm_actuels
+	)
 
-	for x in range(8):
-		for y in range(8):
-			# Distance de Manhattan entre le joueur et la case
-			var dist : int = abs(x - jx) + abs(y - jy)
-
-			# Coût réel : 2 PM pour entrer en forêt, 1 PM sinon
-			var cout : int = 2 if board.get_case(x, y) == 4 else 1  # 4 = FORET
-
-			# Case accessible si :
-			# - Dans la portée des PM
-			# - Non occupée par un autre joueur
-			# - Non bloquée (pas VIDE=3, pas MUR=5)
-			# - Pas la case du joueur lui-même
-			if dist == 0:
-				continue
-			if dist > pm:
-				continue
-			var type_case : int = board.get_case(x, y)
-			if type_case == 3 or type_case == 5:  # VIDE ou MUR
-				continue
-			if board.case_occupee(x, y):
-				continue
-			if cout > pm:
-				continue
-
-			_creer_surbrillance(x, y, Color(1.0, 1.0, 0.3, 0.45))  # Jaune
+	for cle in cases.keys():
+		var coords : PackedStringArray = cle.split(",")
+		_creer_surbrillance(coords[0].to_int(), coords[1].to_int(), Color(1.0, 1.0, 0.3, 0.45))
 
 
 # -------------------------------------------------------
@@ -574,7 +641,7 @@ func _mettre_a_jour_evenements() -> void:
 			mine["x"], mine["y"],
 			SCENE_MINE,
 			"mine_%d_%d" % [mine["x"], mine["y"]],
-			0.1  # Légèrement au-dessus de la case
+			0.57  # Légèrement au-dessus de la case
 		)
 
 	# Tas de pièces — après destruction d'une mine
@@ -583,7 +650,7 @@ func _mettre_a_jour_evenements() -> void:
 			tas["x"], tas["y"],
 			SCENE_TAS_PIECES,
 			"tas_%d_%d" % [tas["x"], tas["y"]],
-			0.1
+			0.15
 		)
 
 	# Coffres au trésor
@@ -592,7 +659,7 @@ func _mettre_a_jour_evenements() -> void:
 			coffre["x"], coffre["y"],
 			SCENE_COFFRE,
 			"coffre_%d_%d" % [coffre["x"], coffre["y"]],
-			0.1
+			0.35
 		)
 
 
@@ -606,4 +673,20 @@ func _placer_evenement(x: int, y: int, scene: PackedScene, cle: String, hauteur_
 	var pos   : Vector3 = grid_to_world(x, y)
 	noeud.position = Vector3(pos.x, hauteur_y, pos.z)
 	add_child(noeud)
+
+	# Barre de vie uniquement pour les mines
+	if cle.begins_with("mine_"):
+		# Cherche les HP de cette mine dans event_manager
+		for mine in event_manager.mines_actives:
+			if mine["x"] == x and mine["y"] == y:
+				var label := Label3D.new()
+				label.name      = "BarreVie"
+				label.position  = Vector3(0.0, 0.9, 0.0)  # Au-dessus de la mine
+				label.billboard = BaseMaterial3D.BILLBOARD_ENABLED  # Toujours face à la caméra
+				label.font_size = 28
+				label.modulate  = Color(0.1, 0.9, 0.1)  # Vert
+				label.text      = "❤️ %d / %d" % [mine["hp"], mine["hp_max"]]
+				noeud.add_child(label)
+				break
+
 	_noeuds_evenements[cle] = noeud

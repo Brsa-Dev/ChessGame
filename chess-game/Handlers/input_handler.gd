@@ -129,7 +129,7 @@ func _traiter_input_clavier(event: InputEventKey) -> void:
 			index_sort + 1,
 			1 + (index_sort * 2)  # Tour de déblocage : sort2=tour3, sort3=tour5, sort4=tour7
 		], joueur_actif)
-	return
+		return
 
 	var sort : Resource = joueur_actif.sorts[index_sort]
 
@@ -352,14 +352,21 @@ func _deplacer(joueur_actif: Node, cell: Vector2i) -> void:
 		print("Case occupée !")
 		return
 
-	# La forêt coûte COUT_PM_FORET PM au lieu de la distance normale
-	var cout_pm : int = COUT_PM_FORET if type_case_arrivee == board.CaseType.FORET else -1
-
-	# Bloque si PM insuffisants pour le coût réel de la case
-	var cout_reel : int = COUT_PM_FORET if type_case_arrivee == board.CaseType.FORET else 1
-	if joueur_actif.pm_actuels < cout_reel:
-		print("Pas assez de PM pour entrer dans cette case !")
+	# Validation BFS — vérifie que le chemin est réellement accessible
+	# (remplace le calcul Manhattan qui ignorait les obstacles)
+	var cases_accessibles : Dictionary = renderer._calculer_cases_accessibles(
+		joueur_actif.grid_x,
+		joueur_actif.grid_y,
+		joueur_actif.pm_actuels
+	)
+	var cle_cible : String = "%d,%d" % [cell.x, cell.y]
+	if not cases_accessibles.has(cle_cible):
+		print("Case inaccessible !")
 		return
+
+	# Le coût PM réel est celui calculé par le BFS (tient compte de la Forêt et du chemin)
+	var cout_pm : int = cases_accessibles[cle_cible]
+
 	board.liberer_case(joueur_actif.grid_x, joueur_actif.grid_y)
 	joueur_actif.deplacer(cell.x, cell.y, cout_pm)
 

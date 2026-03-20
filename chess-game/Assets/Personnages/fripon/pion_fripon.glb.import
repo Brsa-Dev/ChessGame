@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://dl82gs4m7okny"
-path="res://.godot/imported/kunai.glb-64cd14149004f9f6f4bfff4c8745266a.scn"
+uid="uid://ilo86kbo7uwm"
+path="res://.godot/imported/pion_fripon.glb-2833ec6aae0c5865c0f51bd4a151b329.scn"
 
 [deps]
 
-source_file="res://Assets/Personnages/fripon/kunai.glb"
-dest_files=["res://.godot/imported/kunai.glb-64cd14149004f9f6f4bfff4c8745266a.scn"]
+source_file="res://Assets/Personnages/fripon/pion_fripon.glb"
+dest_files=["res://.godot/imported/pion_fripon.glb-2833ec6aae0c5865c0f51bd4a151b329.scn"]
 
 [params]
 
