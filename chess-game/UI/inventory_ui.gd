@@ -20,11 +20,11 @@ extends CanvasLayer
 # Connectés à input_handler dans main.gd._connecter_signaux().
 # =======================================================
 
-signal bombe_demande_cible(item: Resource)    # Active le mode ciblage bombe
-signal bandage_utilise(item: Resource)        # Applique le bandage immédiatement
-signal fleches_utilisees(item: Resource)      # Active le flag flèches empoisonnées
-signal cape_utilisee(item: Resource)          # Active le mode ciblage cape de forêt
-signal potion_utilisee(item: Resource)
+signal bombe_demande_cible(item: Item)    # Active le mode ciblage bombe
+signal bandage_utilise(item: Item)        # Applique le bandage immédiatement
+signal fleches_utilisees(item: Item)      # Active le flag flèches empoisonnées
+signal cape_utilisee(item: Item)          # Active le mode ciblage cape de forêt
+signal potion_utilisee(item: Item)
 
 # =======================================================
 # COULEURS DES ITEMS PAR CLASSE
@@ -44,6 +44,11 @@ const COULEUR_FRIPON  : String = "#ffdd44"
 
 var _joueur_actif : Node  = null   # Joueur dont l'inventaire est affiché
 var _visible      : bool  = false  # État du panneau (ouvert/fermé)
+
+# -------------------------------------------------------
+# Callback — injecté par main.gd
+# -------------------------------------------------------
+var on_log : Callable  # func(message, joueur)
 
 
 # =======================================================
@@ -146,7 +151,7 @@ func _rafraichir() -> void:
 # Crée une ligne HBox pour un item :
 # [RichTextLabel nom+description] [Bouton d'utilisation (si applicable)]
 # -------------------------------------------------------
-func _creer_ligne_item(item: Resource) -> HBoxContainer:
+func _creer_ligne_item(item: Item) -> HBoxContainer:
 	var hbox : HBoxContainer = HBoxContainer.new()
 
 	# Couleur selon la classe requise
@@ -174,22 +179,24 @@ func _creer_ligne_item(item: Resource) -> HBoxContainer:
 # Crée le bouton d'utilisation pour les items manuels.
 # Retourne null si l'item n'a pas de bouton (passif ou permanent).
 # -------------------------------------------------------
-func _creer_bouton_utilisation(item: Resource) -> Button:
+func _creer_bouton_utilisation(item: Item) -> Button:
 	match item.id:
 
 		"potion_soin":
 			var btn : Button = _creer_bouton("💊 Utiliser", 90)
 			btn.pressed.connect(func() -> void:
 				_fermer()
-				emit_signal("potion_utilisee", item)
+				on_log.call("🧪 %s utilise une Potion — +30 HP" % _joueur_actif.name, _joueur_actif)
+				potion_utilisee.emit(item)
 			)
 			return btn
-			
+
 		"bombe":
 			var btn : Button = _creer_bouton("💣 Lancer", 90)
 			btn.pressed.connect(func() -> void:
 				_fermer()
-				emit_signal("bombe_demande_cible", item)
+				on_log.call("💣 %s utilise une Bombe !" % _joueur_actif.name, _joueur_actif)
+				bombe_demande_cible.emit(item)
 			)
 			return btn
 
@@ -197,7 +204,8 @@ func _creer_bouton_utilisation(item: Resource) -> Button:
 			var btn : Button = _creer_bouton("🩹 Utiliser", 90)
 			btn.pressed.connect(func() -> void:
 				_fermer()
-				emit_signal("bandage_utilise", item)
+				on_log.call("🩹 %s utilise un Bandage — DoT réduit" % _joueur_actif.name, _joueur_actif)
+				bandage_utilise.emit(item)
 			)
 			return btn
 
@@ -205,7 +213,8 @@ func _creer_bouton_utilisation(item: Resource) -> Button:
 			var btn : Button = _creer_bouton("🏹 Activer", 90)
 			btn.pressed.connect(func() -> void:
 				_fermer()
-				emit_signal("fleches_utilisees", item)
+				on_log.call("🏹 %s active les Flèches Empoisonnées" % _joueur_actif.name, _joueur_actif)
+				fleches_utilisees.emit(item)
 			)
 			return btn
 
@@ -215,7 +224,8 @@ func _creer_bouton_utilisation(item: Resource) -> Button:
 			btn.disabled = (charges <= 0)
 			btn.pressed.connect(func() -> void:
 				_fermer()
-				emit_signal("cape_utilisee", item)
+				on_log.call("🌲 %s utilise la Cape de Forêt" % _joueur_actif.name, _joueur_actif)
+				cape_utilisee.emit(item)
 			)
 			return btn
 

@@ -82,9 +82,6 @@ func activer_rage() -> void:
 	attaque_degats     *= RAGE_MULTIPLICATEUR_ATTAQUE
 	pm_max             += RAGE_BONUS_PM
 	pm_actuels         += RAGE_BONUS_PM
-	print("⚔️ Rage Berserker ! x%d attaque, +%d PM — %d tours" % [
-		RAGE_MULTIPLICATEUR_ATTAQUE, RAGE_BONUS_PM, RAGE_DUREE_TOURS
-	])
 
 
 # -------------------------------------------------------
@@ -96,8 +93,3 @@ func _desactiver_rage() -> void:
 	pm_max         -= RAGE_BONUS_PM
 	# pm_actuels peut avoir été consommé pendant la Rage — on plafonne
 	pm_actuels      = min(pm_actuels, pm_max)
-	print("⚔️ Rage Berserker terminée")
-
-
-func utiliser_passif() -> void:
-	pass

@@ -38,7 +38,3 @@ func _ready() -> void:
 
 	const SortsScript = preload("res://Classe/Sort/mage_sorts.gd")
 	sorts = SortsScript.creer_sorts()
-
-
-func utiliser_passif() -> void:
-	pass

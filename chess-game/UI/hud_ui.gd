@@ -44,7 +44,7 @@ const COULEUR_MORT          : Color = Color(0.35, 0.35, 0.35)
 const COULEUR_J1            : Color = Color(1.0,  1.0,  0.0)
 const COULEUR_J2            : Color = Color(0.0,  1.0,  1.0)
 const COULEUR_J3            : Color = Color(0.0,  1.0,  0.0)
-const COULEURS_JOUEURS      : Array = [COULEUR_J1, COULEUR_J2, COULEUR_J3]
+const COULEURS_JOUEURS      : Array[Color] = [COULEUR_J1, COULEUR_J2, COULEUR_J3]
 
 
 # =======================================================
@@ -52,6 +52,7 @@ const COULEURS_JOUEURS      : Array = [COULEUR_J1, COULEUR_J2, COULEUR_J3]
 # =======================================================
 
 var tour_manager : Node = null
+var board        : Node = null  # Injectée par main.gd
 
 
 # =======================================================
@@ -83,7 +84,7 @@ func _ready() -> void:
 # API PUBLIQUE
 # =======================================================
 
-func rafraichir(joueurs: Array, joueur_actif: Node) -> void:
+func rafraichir(joueurs: Array[Node], joueur_actif: Node) -> void:
 	for enfant in _conteneur.get_children():
 		enfant.queue_free()
 
@@ -158,6 +159,31 @@ func _creer_card(joueur: Node, index: int, joueur_actif: Node) -> PanelContainer
 	label_gold.add_theme_color_override("font_color", COULEUR_GOLD)
 	vbox.add_child(label_gold)
 
+	# -------------------------------------------------------
+	# Case actuelle + modificateurs
+	# N'affiche RIEN pour une case NORMAL (pas d'effet)
+	# -------------------------------------------------------
+	var type_case    : int    = board.get_case(joueur.grid_x, joueur.grid_y) if board != null else -1
+	var nom_case     : String = _get_nom_case(type_case)
+	var modif_case   : String = _get_modif_case(type_case)
+	var couleur_case : Color  = _get_couleur_case(type_case)
+
+	if nom_case != "":
+		var label_case := Label.new()
+		label_case.text = "📍 %s  %s" % [nom_case, modif_case]
+		label_case.add_theme_font_size_override("font_size", FONT_SIZE_STATS)
+		label_case.add_theme_color_override("font_color", couleur_case)
+		label_case.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		vbox.add_child(label_case)
+
+	# Résistance de case active (Forêt)
+	if joueur.resistance_case > 0.0:
+		var label_res := Label.new()
+		label_res.text = "🛡 Résistance case : +%.0f%%" % (joueur.resistance_case * 100)
+		label_res.add_theme_font_size_override("font_size", FONT_SIZE_STATS - 1)
+		label_res.add_theme_color_override("font_color", Color(0.2, 0.85, 0.3))
+		vbox.add_child(label_res)
+
 	# Effets de statut
 	var effets_texte : String = _get_effets(joueur)
 	if effets_texte != "":
@@ -211,16 +237,52 @@ func _couleur_hp(pct: float) -> Color:
 
 
 func _get_classe(joueur: Node) -> String:
-	var path : String = joueur.get_script().resource_path
-	if "fripon"   in path: return "Fripon"
-	if "mage"     in path: return "Mage"
-	if "guerrier" in path: return "Guerrier"
-	if "archer"   in path: return "Archer"
-	return "?"
+	return joueur.get_classe().capitalize()
+
+
+# -------------------------------------------------------
+# Retourne le nom lisible du type de case.
+# Retourne "" pour NORMAL — aucun effet, rien à afficher.
+# -------------------------------------------------------
+func _get_nom_case(type_case: int) -> String:
+	match type_case:
+		1: return "Lave 🔥"
+		2: return "Eau 💧"
+		3: return "Vide ⬛"
+		4: return "Forêt 🌲"
+		5: return "Mur 🧱"
+		6: return "Tour 🏰"
+	return ""
+
+
+# -------------------------------------------------------
+# Retourne les modificateurs de la case sous forme lisible.
+# -------------------------------------------------------
+func _get_modif_case(type_case: int) -> String:
+	match type_case:
+		1: return "(-10 HP/tour)"
+		2: return "(+10 HP/tour)"
+		4: return "(-1 PM • +10% résist.)"
+		6: return "(+1 portée sorts)"
+	return ""
+
+
+# -------------------------------------------------------
+# Retourne la couleur associée au type de case.
+# -------------------------------------------------------
+func _get_couleur_case(type_case: int) -> Color:
+	match type_case:
+		1: return Color(1.0,  0.35, 0.1)   # Lave    — orange/rouge
+		2: return Color(0.2,  0.6,  1.0)   # Eau     — bleu
+		3: return Color(0.35, 0.35, 0.35)  # Vide    — gris
+		4: return Color(0.2,  0.8,  0.3)   # Forêt   — vert
+		5: return Color(0.6,  0.5,  0.4)   # Mur     — marron
+		6: return Color(0.95, 0.82, 0.2)   # Tour    — doré
+	return Color(0.7, 0.7, 0.7)
 
 
 func _get_effets(joueur: Node) -> String:
-	var parties : Array = []
+	var parties : Array[String] = []
 
 	if joueur.tours_immobilise > 0:
 		parties.append("❄️ Gel (%dT)" % joueur.tours_immobilise)
@@ -228,9 +290,6 @@ func _get_effets(joueur: Node) -> String:
 	for source_id in joueur.dots_actifs:
 		var dot : Dictionary = joueur.dots_actifs[source_id]
 		parties.append("☠️ DoT %d/T (%dT)" % [dot["degats"], dot["tours_restants"]])
-
-	if joueur.resistance_case > 0.0:
-		parties.append("🛡️ Case +%.0f%%" % (joueur.resistance_case * 100))
 
 	if joueur.resistance_degats > 0.0:
 		parties.append("🛡️ +%.0f%% rés." % (joueur.resistance_degats * 100))

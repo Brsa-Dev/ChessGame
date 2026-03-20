@@ -9,6 +9,7 @@
 #
 # Les effets des items sont appliqués dans shop_manager.appliquer_effet().
 # =======================================================
+class_name Item
 extends Resource
 
 
@@ -52,7 +53,7 @@ static func creer(
 	p_desc    : String,
 	p_limite  : int    = -1,
 	p_classe  : String = ""
-) -> Resource:
+) -> Item:
 	var item            := new()
 	item.id              = p_id
 	item.nom             = p_nom
@@ -70,7 +71,7 @@ static func creer(
 # Disponibles pour TOUTES les classes à chaque tour de boutique.
 # Limite 1 par joueur par partie pour éviter les stacks abusifs.
 # =======================================================
-static func get_items_communs() -> Array:
+static func get_items_communs() -> Array[Item]:
 	return [
 		creer("potion_soin",         "Potion de Soin",         3, Usage.UNIQUE,    "Restaure 30 HP",           1),
 		creer("bottes_vitesse",      "Bottes de Vitesse",      4, Usage.PERMANENT, "+1 PM permanent",          1),
@@ -86,7 +87,7 @@ static func get_items_communs() -> Array:
 # Filtrés par classe dans shop_ui.gd et shop_manager.gd.
 # Chaque classe a 4 items uniques qui synergisent avec ses sorts.
 # =======================================================
-static func get_items_classe(classe: String) -> Array:
+static func get_items_classe(classe: String) -> Array[Item]:
 	match classe:
 		"guerrier": return _items_guerrier()
 		"mage":     return _items_mage()
@@ -98,7 +99,7 @@ static func get_items_classe(classe: String) -> Array:
 # -------------------------------------------------------
 # Guerrier — tank, dégâts élevés, Rage
 # -------------------------------------------------------
-static func _items_guerrier() -> Array:
+static func _items_guerrier() -> Array[Item]:
 	return [
 		creer("epee_renforcee",  "Épée Renforcée",    4, Usage.PERMANENT, "+10 attaque de base",               1, "guerrier"),
 		creer("armure_lourde",   "Armure Lourde",     6, Usage.PERMANENT, "-20% dégâts reçus",                 1, "guerrier"),
@@ -110,7 +111,7 @@ static func _items_guerrier() -> Array:
 # -------------------------------------------------------
 # Mage — contrôle, sorts puissants, Tempête
 # -------------------------------------------------------
-static func _items_mage() -> Array:
+static func _items_mage() -> Array[Item]:
 	return [
 		creer("baton_arcanique", "Bâton Arcanique",   5, Usage.PERMANENT, "+10 dégâts sur tous les sorts",    1, "mage"),
 		creer("tome_glace",      "Tome de Glace",     4, Usage.UNIQUE,    "Réduit le CD de Gel de 1",         1, "mage"),
@@ -122,7 +123,7 @@ static func _items_mage() -> Array:
 # -------------------------------------------------------
 # Archer — mobilité, pièges, passif Forêt
 # -------------------------------------------------------
-static func _items_archer() -> Array:
+static func _items_archer() -> Array[Item]:
 	return [
 		creer("arc_long",            "Arc Long",             5, Usage.PERMANENT, "+1 portée attaques et sorts",           1, "archer"),
 		creer("fleches_empoisonnees", "Flèches Empoisonnées", 4, Usage.PERMANENT, "Prochaine attaque → DoT 5/tour 3 tours", 1, "archer"),
@@ -134,7 +135,7 @@ static func _items_archer() -> Array:
 # -------------------------------------------------------
 # Fripon — or, combo, mobilité
 # -------------------------------------------------------
-static func _items_fripon() -> Array:
+static func _items_fripon() -> Array[Item]:
 	return [
 		creer("dague_aceree",       "Dague Acérée",           4, Usage.PERMANENT, "+5 attaque de base",              1, "fripon"),
 		creer("ceinture_pickpocket", "Ceinture de Pickpocket", 4, Usage.PERMANENT, "Vole 1 Gold par attaque de base", 1, "fripon"),

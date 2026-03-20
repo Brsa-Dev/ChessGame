@@ -11,20 +11,7 @@
 # Appelé via ajouter(message, categorie, joueur) depuis main.gd.
 # =======================================================
 class_name LogUI
-extends PanelContainer
-
-
-# =======================================================
-# CATÉGORIES
-# =======================================================
-enum Categorie {
-	SYSTEME,    # Tour, début/fin, général
-	SORT,       # Sorts lancés, attaques, combat
-	ETAT,       # Effets de statut — pièges, DoT, immobilisation
-	EVENEMENT,  # Événements de plateau
-	MORT,       # Éliminations, fin de partie
-	ACHAT,      # Achats boutique, items utilisés
-}
+extends CanvasLayer
 
 
 # =======================================================
@@ -38,29 +25,48 @@ const COULEUR_J1 : Color = Color.YELLOW
 const COULEUR_J2 : Color = Color.CYAN
 const COULEUR_J3 : Color = Color.GREEN
 
-# Couleurs par catégorie (si aucun joueur fourni)
+# Couleur par défaut (aucun joueur fourni)
 const COULEUR_SYSTEME   : Color = Color(0.85, 0.85, 0.85)
-const COULEUR_SORT      : Color = Color(0.75, 0.4,  1.0)
-const COULEUR_ETAT      : Color = Color(0.0,  0.85, 0.65)
-const COULEUR_EVENEMENT : Color = Color(0.0,  0.85, 0.85)
-const COULEUR_MORT      : Color = Color(1.0,  0.25, 0.25)
-const COULEUR_ACHAT     : Color = Color(1.0,  0.85, 0.0)
 
 
 # =======================================================
 # RÉFÉRENCES — Injectées par main.gd
 # =======================================================
 
-var joueurs : Array = []  # Nécessaire pour déduire la couleur joueur
+var joueurs : Array[Node] = []  # Nécessaire pour déduire la couleur joueur
 
-@onready var _conteneur_messages : VBoxContainer = $VBoxContainer/Messages
+@onready var _conteneur_messages : VBoxContainer = $PanelContainer/VBoxContainer/Messages
 
 
 # =======================================================
 # INITIALISATION
 # =======================================================
 func _ready() -> void:
-	call_deferred("_repositionner")
+	layer = 5
+	var panel : PanelContainer = $PanelContainer
+	if panel == null:
+		push_error("LogUI — PanelContainer introuvable")
+		return
+
+	# Taille et position fixes en haut à gauche
+	panel.set_position(Vector2(8, 8))
+	panel.set_custom_minimum_size(Vector2(270, 30))
+
+	# Fond semi-transparent
+	var style := StyleBoxFlat.new()
+	style.bg_color              = Color(0.05, 0.05, 0.10, 0.88)
+	style.set_corner_radius_all(6)
+	style.content_margin_left   = 8.0
+	style.content_margin_right  = 8.0
+	style.content_margin_top    = 6.0
+	style.content_margin_bottom = 6.0
+	panel.add_theme_stylebox_override("panel", style)
+
+	# Applique une taille min sur le conteneur Messages
+	# pour qu'il soit visible même vide
+	var messages : VBoxContainer = $PanelContainer/VBoxContainer/Messages
+	if messages != null:
+		messages.set_custom_minimum_size(Vector2(250, 0))
 
 
 # =======================================================
@@ -71,8 +77,8 @@ func _ready() -> void:
 # Ajoute un message en tête du log.
 # Couleur déterminée par joueur (si fourni) ou par catégorie.
 # -------------------------------------------------------
-func ajouter(message: String, categorie: Categorie = Categorie.SYSTEME, joueur: Node = null) -> void:
-	var couleur := _get_couleur(categorie, joueur)
+func ajouter(message: String, joueur: Node = null) -> void:
+	var couleur := _get_couleur(joueur)
 
 	var label := Label.new()
 	label.text          = message
@@ -94,21 +100,13 @@ func ajouter(message: String, categorie: Categorie = Categorie.SYSTEME, joueur: 
 # HELPERS
 # =======================================================
 
-func _get_couleur(categorie: Categorie, joueur: Node) -> Color:
-	# Joueur identifié → couleur joueur prioritaire
+func _get_couleur(joueur: Node) -> Color:
 	if joueur != null:
 		var idx : int = joueurs.find(joueur)
 		match idx:
 			0: return COULEUR_J1
 			1: return COULEUR_J2
 			2: return COULEUR_J3
-	# Sinon couleur par catégorie
-	match categorie:
-		Categorie.SORT:      return COULEUR_SORT
-		Categorie.ETAT:      return COULEUR_ETAT
-		Categorie.EVENEMENT: return COULEUR_EVENEMENT
-		Categorie.MORT:      return COULEUR_MORT
-		Categorie.ACHAT:     return COULEUR_ACHAT
 	return COULEUR_SYSTEME
 
 
@@ -122,7 +120,7 @@ func _notification(what: int) -> void:
 
 
 func _repositionner() -> void:
-	set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
-	set_position(Vector2(5, 5))
-	# Largeur fixe — la hauteur s'adapte au nombre de messages (fit_content)
-	set_custom_minimum_size(Vector2(280, 0))
+	var panel : PanelContainer = $PanelContainer
+	if panel == null:
+		return
+	panel.set_position(Vector2(8, 8))

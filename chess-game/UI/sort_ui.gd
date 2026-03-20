@@ -51,6 +51,7 @@ const COULEUR_TEXTE_FIN_TOUR    : Color = Color(0.9,  0.9,  1.0,  1.0)   # Texte
 var joueur_actif  : Node = null  # Joueur dont c'est le tour
 var input_handler : Node = null  # Pour lire/écrire sort_selectionne
 var renderer      : Node = null  # Pour appeler rafraichir() après sélection
+var tour_manager  : Node = null  # Pour get_joueur_actif() dans _on_sort_clique
 
 
 # =======================================================
@@ -59,6 +60,10 @@ var renderer      : Node = null  # Pour appeler rafraichir() après sélection
 
 # Conteneur principal centré en bas de l'écran
 var _conteneur : HBoxContainer = null
+
+# Référence directe au bouton — stockée à la création pour éviter
+# de parcourir l'arbre à chaque appel de set_fin_tour_actif()
+var _bouton_fin_tour : Button = null
 
 
 # =======================================================
@@ -104,6 +109,8 @@ func _ready() -> void:
 	btn.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
 	btn.add_theme_font_size_override("font_size", 15)
 	btn.pressed.connect(func(): get_tree().call_group("main", "fin_de_tour"))
+	# Stocke la référence directe pour pouvoir le désactiver
+	_bouton_fin_tour = btn
 	hbox_global.add_child(btn)
 
 
@@ -124,7 +131,7 @@ func rafraichir() -> void:
 
 	# Crée une card pour chacun des 4 sorts
 	for i in range(joueur_actif.sorts.size()):
-		var sort : Resource = joueur_actif.sorts[i]
+		var sort : Sort = joueur_actif.sorts[i]
 		var card : PanelContainer = _creer_card(i, sort)
 		_conteneur.add_child(card)
 
@@ -137,7 +144,7 @@ func rafraichir() -> void:
 # Construit le PanelContainer d'une card avec son contenu.
 # L'index détermine le raccourci clavier affiché (A/Z/E/R).
 # -------------------------------------------------------
-func _creer_card(index: int, sort: Resource) -> PanelContainer:
+func _creer_card(index: int, sort: Sort) -> PanelContainer:
 	var card := PanelContainer.new()
 	card.custom_minimum_size = Vector2(CARD_LARGEUR, CARD_HAUTEUR)
 
@@ -165,7 +172,7 @@ func _creer_card(index: int, sort: Resource) -> PanelContainer:
 	card.add_child(vbox)
 
 	# Raccourci clavier + nom du sort
-	var touches    : Array = ["A", "Z", "E", "R"]
+	var touches    : Array[String] = ["A", "Z", "E", "R"]
 	var label_nom  := Label.new()
 	label_nom.text = "[%s] %s" % [touches[index], sort.nom]
 	label_nom.add_theme_font_size_override("font_size", 14)
@@ -214,7 +221,7 @@ func _creer_card(index: int, sort: Resource) -> PanelContainer:
 #   - Les PM du joueur (insuffisants ?)
 #   - L'index sélectionné dans input_handler
 # -------------------------------------------------------
-func _get_etat_sort(index: int, sort: Resource) -> String:
+func _get_etat_sort(index: int, sort: Sort) -> String:
 	# Sort non encore débloqué ce tour
 	if index >= joueur_actif.sorts_debloques:
 		return "verouille"
@@ -252,8 +259,8 @@ func _get_couleur_texte_etat(etat: String) -> Color:
 	return Color.TRANSPARENT
 
 
-func _formater_stats(sort: Resource) -> String:
-	var parties : Array = []
+func _formater_stats(sort: Sort) -> String:
+	var parties : Array[String] = []
 	parties.append("⚡ %d PM" % sort.cout_pm)
 	if sort.cout_gold > 0:
 		parties.append("💰 %d G" % sort.cout_gold)
@@ -266,7 +273,7 @@ func _formater_stats(sort: Resource) -> String:
 	return "  ".join(parties)
 
 
-func _formater_etat(etat: String, sort: Resource) -> String:
+func _formater_etat(etat: String, sort: Sort) -> String:
 	match etat:
 		"cooldown":        return "⏳ %d tour(s)" % sort.cooldown_actuel
 		"verouille":       return "🔒 Verrouillé"
@@ -287,7 +294,14 @@ func _rendre_cliquable(card: PanelContainer, index: int) -> void:
 	btn.pressed.connect(_on_sort_clique.bind(index))
 	card.add_child(btn)
 
-
+# -------------------------------------------------------
+# Active ou désactive le bouton Fin de Tour.
+# Appelée par main.gd quand la boutique s'ouvre/se ferme.
+# -------------------------------------------------------
+func set_fin_tour_actif(actif: bool) -> void:
+	if _bouton_fin_tour != null:
+		_bouton_fin_tour.disabled = not actif
+					
 # =======================================================
 # GESTION DU CLIC
 # =======================================================
@@ -309,9 +323,29 @@ func _on_sort_clique(index: int) -> void:
 	else:
 		input_handler.sort_selectionne = index
 
-	# Met à jour les surbrillances 3D
+	# Sorts auto-ciblants → activation immédiate via card aussi
+	if tour_manager != null:
+		var ja   : Node     = tour_manager.get_joueur_actif()
+		var sort : Sort = ja.sorts[index]
+		if sort.id in ["guerrier_rage", "fripon_lame", "fripon_frenesie"]:
+			input_handler.sort_selectionne = -1
+			if renderer != null:
+				renderer.sort_selectionne   = -1
+				renderer.joueur_selectionne = false
+			var sh : Node = input_handler.sort_handler
+			if sh != null:
+				var reussi : bool = sh.utiliser_sort(ja, sort, ja.grid_x, ja.grid_y)
+				if reussi:
+					if renderer != null:
+						renderer.rafraichir()
+					rafraichir()
+			return
+
+	# Synchronise le renderer
 	if renderer != null:
 		renderer.sort_selectionne = input_handler.sort_selectionne
+		if tour_manager != null:
+			renderer.joueur_actif = tour_manager.get_joueur_actif()
 		renderer.rafraichir()
 
 	# Rafraichit les cards pour refléter la nouvelle sélection

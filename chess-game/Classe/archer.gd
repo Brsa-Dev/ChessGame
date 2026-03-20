@@ -29,6 +29,7 @@ const ARCHER_COUT_PM           : int = 1
 
 # Bonus de portée d'attaque quand l'Archer est sur une case Forêt
 const ARCHER_PORTEE_FORET_BONUS : int = 1
+const PORTEE_MINIMUM            : int = 1  # Portée d'attaque minimale (sécurité)
 
 
 # =======================================================
@@ -68,11 +69,6 @@ func entrer_foret() -> void:
 		return  # Déjà actif — pas de double application
 	est_en_foret    = true
 	attaque_portee += ARCHER_PORTEE_FORET_BONUS
-	print("🌲 %s — Passif Forêt : portée %d→%d" % [
-		name,
-		attaque_portee - ARCHER_PORTEE_FORET_BONUS,
-		attaque_portee
-	])
 
 
 # -------------------------------------------------------
@@ -83,9 +79,4 @@ func quitter_foret() -> void:
 		return  # Pas actif — rien à retirer
 	est_en_foret    = false
 	attaque_portee -= ARCHER_PORTEE_FORET_BONUS
-	attaque_portee  = max(1, attaque_portee)  # Portée minimum 1 (sécurité)
-	print("🍂 %s — Passif Forêt désactivé" % name)
-
-
-func utiliser_passif() -> void:
-	pass
+	attaque_portee  = max(PORTEE_MINIMUM, attaque_portee)

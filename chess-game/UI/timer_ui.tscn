@@ -3,12 +3,14 @@
 [node name="TimerUI" type="CanvasLayer" unique_id=658193438]
 
 [node name="PanelContainer" type="PanelContainer" parent="." unique_id=1718301793]
-anchors_preset = 1
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -40.0
-offset_bottom = 40.0
-grow_horizontal = 0
+custom_minimum_size = Vector2(-100, 0)
+anchors_preset = 4
+anchor_top = 0.5
+anchor_bottom = 0.5
+offset_top = -20.0
+offset_right = 40.0
+offset_bottom = 20.0
+grow_vertical = 2
 
 [node name="HBoxContainer" type="HBoxContainer" parent="PanelContainer" unique_id=80205572]
 layout_mode = 2

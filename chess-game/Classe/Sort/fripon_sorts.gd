@@ -9,9 +9,9 @@
 #   - Lame Empoisonnée — état : prochaine attaque +10 dmg + DoT
 #   - Frénésie — attaques illimitées à 0 PM pendant 1 tour
 # =======================================================
-extends "res://joueur.gd"
+extends Object
 
-static func creer_sorts() -> Array:
+static func creer_sorts() -> Array[Sort]:
 	const SortScript = preload("res://sort.gd")
 	return [
 		# Sort 1 — Ruée (touche A)

@@ -13,6 +13,14 @@ extends CanvasLayer
 
 
 # =======================================================
+# SIGNAUX
+# =======================================================
+
+# Émis quand le joueur clique "Passer" — main.gd passe au joueur suivant
+signal boutique_fermee
+
+
+# =======================================================
 # RÉFÉRENCES — Nœuds de la scène (définis dans shop_ui.tscn)
 # =======================================================
 
@@ -35,14 +43,6 @@ var shop_manager : Node = null
 # =======================================================
 
 var _joueur_actif : Node = null  # Joueur en train d'acheter
-
-
-# =======================================================
-# SIGNAUX
-# =======================================================
-
-# Émis quand le joueur clique "Passer" — main.gd passe au joueur suivant
-signal boutique_fermee
 
 
 # =======================================================
@@ -69,8 +69,6 @@ func ouvrir(joueur: Node) -> void:
 	_rafraichir_gold()
 	_afficher_items()
 
-	print("Boutique ouverte pour : %s" % joueur.name)
-
 
 # =======================================================
 # AFFICHAGE
@@ -85,23 +83,19 @@ func _rafraichir_gold() -> void:
 # Filtre les items par classe du joueur via shop_manager.
 # -------------------------------------------------------
 func _afficher_items() -> void:
-	# Vide le conteneur avant de reconstruire
 	for enfant in _conteneur_items.get_children():
 		enfant.queue_free()
 
-	var items_visibles : Array = shop_manager.get_stock_pour_joueur(_joueur_actif)
+	var items_visibles : Array[Item] = shop_manager.get_stock_pour_joueur(_joueur_actif)
 
 	for item in items_visibles:
 		var bouton : Button = Button.new()
 
-		# Préfixe de classe pour les items non-communs
 		var prefix : String = "" if item.classe_requise == "" else "[%s] " % item.classe_requise.capitalize()
-		bouton.text              = "%s%s — %d Gold\n%s" % [prefix, item.nom, item.prix, item.description]
-		bouton.autowrap_mode     = TextServer.AUTOWRAP_WORD
+		bouton.text                = "%s%s — %d Gold\n%s" % [prefix, item.nom, item.prix, item.description]
+		bouton.autowrap_mode       = TextServer.AUTOWRAP_WORD
 		bouton.custom_minimum_size = Vector2(300, 60)
-
-		# Grisé si le joueur ne peut pas acheter (or insuffisant ou limite atteinte)
-		bouton.disabled = not shop_manager.peut_acheter(_joueur_actif, item)
+		bouton.disabled            = not shop_manager.peut_acheter(_joueur_actif, item)
 		bouton.pressed.connect(_on_acheter.bind(item))
 		_conteneur_items.add_child(bouton)
 
@@ -110,14 +104,12 @@ func _afficher_items() -> void:
 # CALLBACKS
 # =======================================================
 
-func _on_acheter(item: Resource) -> void:
+func _on_acheter(item: Item) -> void:
 	shop_manager.acheter(_joueur_actif, item)
-	# Rafraîchit le gold ET grise les boutons si nécessaire
 	_rafraichir_gold()
 	_afficher_items()
 
 
 func _on_passer() -> void:
 	_panneau.visible = false
-	print("Joueur %s passe la boutique" % _joueur_actif.name)
-	emit_signal("boutique_fermee")
+	boutique_fermee.emit()

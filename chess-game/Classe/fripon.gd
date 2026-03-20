@@ -39,6 +39,11 @@ const FRIPON_GOLD_PAR_DEGATS : int = 5
 # Nombre d'attaques de base pour recharger la Ruée après utilisation
 const RUEE_ATTAQUES_REQUISES : int = 3
 
+# Lame Empoisonnée — dégâts bonus immédiats + DoT appliqué sur la cible
+const LAME_DEGATS_BONUS : int = 10
+const LAME_DOT_DEGATS   : int = 5
+const LAME_DOT_DUREE    : int = 3
+
 
 # =======================================================
 # ÉTAT — Déplacement
@@ -121,7 +126,8 @@ func debut_tour() -> void:
 	ruee_disponible      = true
 	attaques_depuis_ruee = 0
 	s_est_deplace_ce_tour = false
-	
+
+
 # =======================================================
 # OVERRIDE — attaquer
 # -------------------------------------------------------
@@ -140,21 +146,18 @@ func attaquer(cible: Node) -> int:
 	cible.recevoir_degats(attaque_degats)
 	gagner_gold_sur_degats(attaque_degats)
 
-	# Lame Empoisonnée — +10 dmg immédiats + DoT rafraîchi sur la cible
+	# Lame Empoisonnée — dégâts bonus immédiats + DoT rafraîchi sur la cible
 	if lame_active:
-		cible.recevoir_degats(10)
-		gagner_gold_sur_degats(10)
-		cible.ajouter_dot("lame_empoisonnee", 5, 3)
+		cible.recevoir_degats(LAME_DEGATS_BONUS)
+		gagner_gold_sur_degats(LAME_DEGATS_BONUS)
+		cible.ajouter_dot("lame_empoisonnee", LAME_DOT_DEGATS, LAME_DOT_DUREE)
 		lame_active = false
-		print("☠️ Lame — +10 dmg + DoT rafraîchi !")
 
 	# Compteur Ruée — chaque attaque rapproche du déverrouillage
 	attaques_depuis_ruee += 1
 	if not ruee_disponible and attaques_depuis_ruee >= RUEE_ATTAQUES_REQUISES:
 		ruee_disponible = true
-		print("🗡️ Ruée déverrouillée !")
 
-	print("⚔️ Fripon attaque ! %d dmg — PM : %d" % [attaque_degats, pm_actuels])
 	return attaque_degats
 
 
@@ -167,8 +170,3 @@ func gagner_gold_sur_degats(degats: int) -> void:
 	var gold_gagne : int = degats / FRIPON_GOLD_PAR_DEGATS
 	if gold_gagne > 0:
 		gold += gold_gagne
-		print("💰 +%d Gold (Fripon) ! Total : %d" % [gold_gagne, gold])
-
-
-func utiliser_passif() -> void:
-	pass

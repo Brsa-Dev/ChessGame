@@ -9,9 +9,9 @@
 #   - archer_tir_cible inflige des dégâts bonus si la cible
 #     est sur une case Forêt (géré dans sort_handler)
 # =======================================================
-extends "res://joueur.gd"
+extends Object
 
-static func creer_sorts() -> Array:
+static func creer_sorts() -> Array[Sort]:
 	const SortScript = preload("res://sort.gd")
 	return [
 		# Sort 1 — Flèche Rebondissante (touche A)

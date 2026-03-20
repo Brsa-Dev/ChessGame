@@ -9,9 +9,9 @@
 #   - Météore — zone 3×3 + lave temporaire (effet différé 2 tours)
 #   - Tempête Arcanique — dégâts sur TOUS les ennemis (5 Gold)
 # =======================================================
-extends Node
+extends Object
 
-static func creer_sorts() -> Array:
+static func creer_sorts() -> Array[Sort]:
 	const SortScript = preload("res://sort.gd")
 	return [
 		# Sort 1 — Boule de Feu (touche A)

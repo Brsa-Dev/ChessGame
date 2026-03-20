@@ -11,6 +11,7 @@
 # Une instance par sort par joueur — les sorts NE sont PAS partagés
 # entre joueurs pour que chaque CD soit indépendant.
 # =======================================================
+class_name Sort
 extends Resource
 
 
@@ -120,7 +121,7 @@ static func creer(
 	p_cout_pm     : int,
 	p_ligne_vue   : bool,
 	p_description : String
-) -> Resource:
+) -> Sort:
 	var sort             := new()
 	sort.id              = p_id
 	sort.nom             = p_nom

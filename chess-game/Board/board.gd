@@ -18,8 +18,7 @@ extends Node
 # CONSTANTES — Plateau
 # =======================================================
 
-const TAILLE_PLATEAU    : int = 8  # Plateau carré N×N
-const NB_TOURS_COINS    : int = 4  # Une tour dans chaque coin (fixe, indestructible)
+const TAILLE_PLATEAU : int = 8  # Plateau carré N×N
 
 
 # =======================================================
@@ -87,8 +86,6 @@ func _initialiser_plateau() -> void:
 	# garantir qu'elles ne soient pas écrasées par une case spéciale
 	_placer_tours_coins()
 
-	print("✅ Plateau %d×%d initialisé !" % [TAILLE_PLATEAU, TAILLE_PLATEAU])
-
 
 # -------------------------------------------------------
 # Génère aléatoirement les cases spéciales (Lave, Eau, etc.)
@@ -132,7 +129,7 @@ func _placer_tours_coins() -> void:
 # -------------------------------------------------------
 # Retourne le type de la case en (x, y)
 # -------------------------------------------------------
-func get_case(x: int, y: int) -> int:
+func get_case(x: int, y: int) -> CaseType:
 	return plateau[x][y]
 
 

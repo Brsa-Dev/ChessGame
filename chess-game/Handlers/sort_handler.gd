@@ -13,75 +13,91 @@
 # =======================================================
 extends Node
 
-# -------------------------------------------------------
-# Constantes — sorts Guerrier
-# -------------------------------------------------------
-const DEGATS_IMPACT_MUR     : int = 10   # Dégâts bonus si repoussé contre un mur
-const CASES_REPOUSSE_BOUCLIER : int = 2  # Distance de repousse du Coup de Bouclier
 
-# -------------------------------------------------------
-# Constantes — sorts Mage
-# -------------------------------------------------------
-const DEGATS_METEORE        : int = 25   # Dégâts de base du Météore (+ bonus mage)
-const RAYON_METEORE         : int = 1    # Rayon d'explosion (cases adjacentes incluses)
-const DUREE_LAVE_METEORE    : int = 2    # Tours avant disparition des cases de lave
+# =======================================================
+# CONSTANTES — Sorts Guerrier
+# =======================================================
 
-# -------------------------------------------------------
-# Constantes — sorts Archer
-# -------------------------------------------------------
-const DEGATS_REBOND_FLECHE  : int = 10   # Dégâts du rebond de la Flèche Rebondissante
-const RAYON_REBOND_FLECHE   : int = 2    # Rayon de recherche du rebond (distance Manhattan)
+const DEGATS_IMPACT_MUR       : int = 10  # Dégâts bonus si repoussé contre un mur
+const CASES_REPOUSSE_BOUCLIER : int = 2   # Distance de repousse du Coup de Bouclier
+const DUREE_MUR_TEMPORAIRE    : int = 2   # Tours avant disparition du Mur temporaire
+
+
+# =======================================================
+# CONSTANTES — Sorts Mage
+# =======================================================
+
+const DEGATS_METEORE       : int = 25  # Dégâts de base du Météore (+ bonus mage)
+const RAYON_METEORE        : int = 1   # Rayon d'explosion (cases adjacentes incluses)
+const DUREE_LAVE_METEORE   : int = 2   # Tours avant disparition des cases de lave
+const DELAI_METEORE        : int = 3   # Tours avant l'explosion du Météore
+const DUREE_GEL            : int = 2   # Tours d'immobilisation du sort Gel
+const TEMPETE_MALUS_PORTEE : int = 2   # Réduction de portée infligée par Tempête Arcanique
+
+
+# =======================================================
+# CONSTANTES — Sorts Archer
+# =======================================================
+
+const DEGATS_REBOND_FLECHE  : int = 10  # Dégâts du rebond de la Flèche Rebondissante
+const RAYON_REBOND_FLECHE   : int = 2   # Rayon de recherche du rebond (distance Manhattan)
 const DEGATS_TIR_CIBLE_FORET: int = 60  # Dégâts du Tir Ciblé sur case forêt
-const DUREE_FORET_PLUIE     : int = 2    # Tours de durée des forêts de la Pluie de Flèches
+const DUREE_FORET_PLUIE     : int = 2   # Tours de durée des forêts de la Pluie de Flèches
 const COUT_GOLD_TIR_FORET   : int = 5
 
-# -------------------------------------------------------
-# Constantes — sorts Fripon
-# -------------------------------------------------------
-const DEGATS_RUEE           : int = 5    # Dégâts de la Ruée sur la cible
-const DEGATS_DEROBADE_BASE  : int = 20   # Dégâts de base de l'explosion Dérobade
-const DEGATS_LAME_DEROBADE  : int = 10   # Dégâts bonus Lame lors d'une explosion Dérobade
-const DOT_LAME_DEGATS       : int = 5    # Dégâts par tour du DoT Lame Empoisonnée
-const DOT_LAME_DUREE        : int = 3    # Durée en tours du DoT Lame Empoisonnée
-const ATTAQUES_POUR_RUEE    : int = 3    # Nombre d'attaques pour déverrouiller la Ruée
 
-# -------------------------------------------------------
-# Identifiants de classe — pour la détection propre
-# -------------------------------------------------------
-const CHEMIN_SCRIPT_FRIPON  : String = "fripon"
-const CHEMIN_SCRIPT_ARCHER  : String = "archer"
-const CHEMIN_SCRIPT_MAGE    : String = "mage"
-const CHEMIN_SCRIPT_GUERRIER: String = "guerrier"
+# =======================================================
+# CONSTANTES — Sorts Fripon
+# =======================================================
 
+const DEGATS_RUEE            : int = 5   # Dégâts de la Ruée sur la cible
+const DEGATS_DEROBADE_BASE   : int = 20  # Dégâts de base de l'explosion Dérobade
+const DEGATS_LAME_DEROBADE   : int = 10  # Dégâts bonus Lame lors d'une explosion Dérobade
+const DOT_LAME_DEGATS        : int = 5   # Dégâts par tour du DoT Lame Empoisonnée
+const DOT_LAME_DUREE         : int = 3   # Durée en tours du DoT Lame Empoisonnée
+const ATTAQUES_POUR_RUEE     : int = 3   # Nombre d'attaques pour déverrouiller la Ruée
+const DUREE_MARQUE_DEROBADE  : int = 3   # Tours avant expiration de la marque Dérobade
+
+
+# =======================================================
+# CONSTANTES — Sorts inapplicables sur mine
 # -------------------------------------------------------
-# Sorts qui ne peuvent pas cibler une mine
-# (sorts utilitaires, buffs, sorts de zone sur joueurs)
-# -------------------------------------------------------
-const SORTS_INAPPLICABLES_SUR_MINE : Array = [
+# Sorts utilitaires, buffs, sorts de zone sur joueurs —
+# ne peuvent pas cibler une mine d'or.
+# =======================================================
+
+const SORTS_INAPPLICABLES_SUR_MINE : Array[String] = [
 	"guerrier_mur", "guerrier_rage",
 	"mage_gel", "mage_tempete",
 	"archer_piege",
 	"fripon_derobade", "fripon_lame", "fripon_frenesie"
 ]
 
-# -------------------------------------------------------
-# Références injectées par main.gd dans _ready()
-# -------------------------------------------------------
+
+# =======================================================
+# RÉFÉRENCES — Injectées par main.gd dans _ready()
+# =======================================================
+
 var board           : Node  = null  # board.gd — état du plateau
 var renderer        : Node  = null  # renderer.gd — redraw visuel
 var event_manager   : Node  = null  # event_manager.gd — mines, coffres
 var effects_handler : Node  = null  # effects_handler.gd — effets de case
-var joueurs         : Array = []    # [joueur1, joueur2, joueur3]
+var joueurs         : Array[Node] = []  # [joueur1, joueur2, joueur3]
+var log_ui          : Node  = null  # LogUI — historique des actions
 
+
+# =======================================================
+# ÉTAT — Listes partagées avec main.gd
 # -------------------------------------------------------
-# Listes d'état partagées avec main.gd
 # Injectées par référence dans _ready()
-# -------------------------------------------------------
-var meteores_en_attente : Array = []  # Météores en vol
-var laves_temporaires   : Array = []  # Cases de lave actives
-var forets_temporaires  : Array = []  # Forêts temporaires actives
-var pieges_actifs       : Array = []  # Pièges posés sur le plateau
-var murs_temporaires : Array = []	  # Murs temporaires actives
+# =======================================================
+
+var meteores_en_attente : Array[Dictionary] = []  # Météores en vol
+var laves_temporaires   : Array[Dictionary] = []  # Cases de lave actives
+var forets_temporaires  : Array[Dictionary] = []  # Forêts temporaires actives
+var pieges_actifs       : Array[Dictionary] = []  # Pièges posés sur le plateau
+var murs_temporaires    : Array[Dictionary] = []  # Murs temporaires actifs
+
 
 # =======================================================
 # POINT D'ENTRÉE — Utiliser un sort
@@ -90,7 +106,7 @@ var murs_temporaires : Array = []	  # Murs temporaires actives
 # Retourne true si le sort a été utilisé avec succès.
 # Retourne false si le sort échoue (cible invalide, etc.)
 # =======================================================
-func utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) -> bool:
+func utiliser_sort(joueur: Node, sort: Sort, cible_x: int, cible_y: int) -> bool:
 	var cible : Node = _get_joueur_en(cible_x, cible_y)
 
 	# -------------------------------------------------------
@@ -109,7 +125,7 @@ func utiliser_sort(joueur: Node, sort: Resource, cible_x: int, cible_y: int) -> 
 # =======================================================
 # DISPATCH SORTS
 # =======================================================
-func _dispatcher_sort(joueur: Node, sort: Resource, cible: Node, cible_x: int, cible_y: int) -> bool:
+func _dispatcher_sort(joueur: Node, sort: Sort, cible: Node, cible_x: int, cible_y: int) -> bool:
 	match sort.id:
 
 		# ---------------------------------------------------
@@ -131,9 +147,9 @@ func _dispatcher_sort(joueur: Node, sort: Resource, cible: Node, cible_x: int, c
 		# ---------------------------------------------------
 		# ARCHER
 		# ---------------------------------------------------
-		"archer_fleche":       return _sort_archer_fleche(joueur, sort, cible, cible_x, cible_y)
-		"archer_piege":        return _sort_archer_piege(joueur, sort, cible_x, cible_y)
-		"archer_tir_cible":    return _sort_archer_tir_cible(joueur, sort, cible, cible_x, cible_y)
+		"archer_fleche":        return _sort_archer_fleche(joueur, sort, cible, cible_x, cible_y)
+		"archer_piege":         return _sort_archer_piege(joueur, sort, cible_x, cible_y)
+		"archer_tir_cible":     return _sort_archer_tir_cible(joueur, sort, cible, cible_x, cible_y)
 		"archer_pluie_fleches": return _sort_archer_pluie_fleches(joueur, sort, cible_x, cible_y)
 
 		# ---------------------------------------------------
@@ -144,7 +160,7 @@ func _dispatcher_sort(joueur: Node, sort: Resource, cible: Node, cible_x: int, c
 		"fripon_lame":     return _sort_fripon_lame(joueur, sort)
 		"fripon_frenesie": return _sort_fripon_frenesie(joueur, sort)
 
-	print("⚠️ Sort inconnu : %s" % sort.id)
+	push_warning("sort_handler._dispatcher_sort() — sort inconnu : %s" % sort.id)
 	return false
 
 
@@ -152,45 +168,44 @@ func _dispatcher_sort(joueur: Node, sort: Resource, cible: Node, cible_x: int, c
 # SORTS GUERRIER
 # =======================================================
 
-func _sort_guerrier_mur(joueur: Node, sort: Resource, cible_x: int, cible_y: int) -> bool:
+func _sort_guerrier_mur(joueur: Node, sort: Sort, cible_x: int, cible_y: int) -> bool:
 	if _get_joueur_en(cible_x, cible_y) != null:
-		print("Impossible — un joueur est sur cette case !")
 		return false
 	if board.get_case(cible_x, cible_y) == board.CaseType.TOUR:
-		print("Impossible — la case Tour ne peut pas être remplacée !")
 		return false
 
 	_consommer_ressources(joueur, sort)
 
-	# Mémorise le type original pour restauration après 2 tours
+	# Mémorise le type original pour restauration après DUREE_MUR_TEMPORAIRE tours
 	murs_temporaires.append({
-		"x"            : cible_x,
-		"y"            : cible_y,
-		"type_original": board.get_case(cible_x, cible_y),
-		"tours_restants": 2,
-		"lanceur"      : joueur
+		"x"             : cible_x,
+		"y"             : cible_y,
+		"type_original" : board.get_case(cible_x, cible_y),
+		"tours_restants": DUREE_MUR_TEMPORAIRE,
+		"lanceur"       : joueur
 	})
 
 	board.plateau[cible_x][cible_y] = board.CaseType.MUR
-	renderer.queue_redraw()
+	renderer.rafraichir()
+	_log("🧱 %s pose un Mur en (%d,%d)" % [joueur.name, cible_x, cible_y], joueur)
 	return true
 
 
-func _sort_guerrier_hache(joueur: Node, sort: Resource, cible: Node) -> bool:
+func _sort_guerrier_hache(joueur: Node, sort: Sort, cible: Node) -> bool:
 	if not cible:
 		return false
 	if not _a_ligne_de_vue(joueur.grid_x, joueur.grid_y, cible.grid_x, cible.grid_y):
-		print("Hache bloquée — pas de ligne de vue !")
 		return false
 	_consommer_ressources(joueur, sort)
 	var degats : int = sort.degats + joueur.bonus_degats_sorts
 	cible.recevoir_degats(degats)
 	cible.ajouter_dot("hache_empoisonnee", DOT_LAME_DEGATS, DOT_LAME_DUREE)
 	joueur.gagner_gold_sur_degats(degats)
+	_log("🪓 %s frappe %s — %d dmg + poison" % [joueur.name, cible.name, degats], joueur)
 	return true
 
 
-func _sort_guerrier_bouclier(joueur: Node, sort: Resource, cible: Node) -> bool:
+func _sort_guerrier_bouclier(joueur: Node, sort: Sort, cible: Node) -> bool:
 	if not cible:
 		return false
 	_consommer_ressources(joueur, sort)
@@ -203,18 +218,21 @@ func _sort_guerrier_bouclier(joueur: Node, sort: Resource, cible: Node) -> bool:
 	# Applique l'effet de la case d'arrivée (Lave, Eau, Forêt...)
 	effects_handler.appliquer_effet_case(cible)
 
-	renderer.queue_redraw()
+	renderer.rafraichir()
 
 	if bloque_obstacle:
 		cible.recevoir_degats(DEGATS_IMPACT_MUR)
 		joueur.gagner_gold_sur_degats(DEGATS_IMPACT_MUR)
-
+		_log("🛡️ %s repousse %s contre un mur — %d + %d dmg" % [joueur.name, cible.name, degats, DEGATS_IMPACT_MUR], joueur)
+	else:
+		_log("🛡️ %s repousse %s — %d dmg" % [joueur.name, cible.name, degats], joueur)
 	return true
 
 
-func _sort_guerrier_rage(joueur: Node, sort: Resource) -> bool:
+func _sort_guerrier_rage(joueur: Node, sort: Sort) -> bool:
 	_consommer_ressources(joueur, sort)
 	joueur.activer_rage()
+	_log("😡 %s entre en Rage !" % joueur.name, joueur)
 	return true
 
 
@@ -222,40 +240,42 @@ func _sort_guerrier_rage(joueur: Node, sort: Resource) -> bool:
 # SORTS MAGE
 # =======================================================
 
-func _sort_mage_boule_feu(joueur: Node, sort: Resource, cible: Node) -> bool:
+func _sort_mage_boule_feu(joueur: Node, sort: Sort, cible: Node) -> bool:
 	if not cible:
 		return false
 	_consommer_ressources(joueur, sort)
 	var degats : int = sort.degats + joueur.bonus_degats_sorts
 	cible.recevoir_degats(degats)
 	joueur.gagner_gold_sur_degats(degats)
+	_log("🔥 %s — Boule de Feu sur %s — %d dmg" % [joueur.name, cible.name, degats], joueur)
 	return true
 
 
-func _sort_mage_gel(joueur: Node, sort: Resource, cible: Node) -> bool:
+func _sort_mage_gel(joueur: Node, sort: Sort, cible: Node) -> bool:
 	if not cible:
 		return false
 	_consommer_ressources(joueur, sort)
-	cible.tours_immobilise = 2
+	cible.tours_immobilise = DUREE_GEL
+	_log("❄️ %s gèle %s — %d tours" % [joueur.name, cible.name, DUREE_GEL], joueur)
 	return true
 
 
-func _sort_mage_meteore(joueur: Node, sort: Resource, cible_x: int, cible_y: int) -> bool:
+func _sort_mage_meteore(joueur: Node, sort: Sort, cible_x: int, cible_y: int) -> bool:
 	_consommer_ressources(joueur, sort)
 	meteores_en_attente.append({
 		"cible_x"        : cible_x,
 		"cible_y"        : cible_y,
-		"tours_restants" : 3,       # Explose au 3ème tour du Mage après le lancer
+		"tours_restants" : DELAI_METEORE,
 		"lanceur"        : joueur
 	})
+	_log("☄️ %s — Météore en route vers (%d,%d) !" % [joueur.name, cible_x, cible_y], joueur)
 	return true
 
 
-func _sort_mage_tempete(joueur: Node, sort: Resource) -> bool:
+func _sort_mage_tempete(joueur: Node, sort: Sort) -> bool:
 	# Coût réduit par le Cristal de Mana si le Mage l'a acheté
 	var cout_final : int = max(0, sort.cout_gold - joueur.reduction_cout_tempete)
 	if joueur.gold < cout_final:
-		print("Pas assez de Gold pour Tempête Arcanique !")
 		return false
 
 	# On déduit manuellement (le coût est modifié, pas sort.cout_gold)
@@ -269,9 +289,10 @@ func _sort_mage_tempete(joueur: Node, sort: Resource) -> bool:
 			continue
 		var degats : int = sort.degats + joueur.bonus_degats_sorts
 		j.recevoir_degats(degats)
-		j.attaque_portee = max(0, j.attaque_portee - 2)
+		j.attaque_portee = max(0, j.attaque_portee - TEMPETE_MALUS_PORTEE)
 		joueur.gagner_gold_sur_degats(degats)
 
+	_log("⚡ %s — Tempête Arcanique !" % joueur.name, joueur)
 	return true
 
 
@@ -279,11 +300,10 @@ func _sort_mage_tempete(joueur: Node, sort: Resource) -> bool:
 # SORTS ARCHER
 # =======================================================
 
-func _sort_archer_fleche(joueur: Node, sort: Resource, cible: Node, cible_x: int, cible_y: int) -> bool:
+func _sort_archer_fleche(joueur: Node, sort: Sort, cible: Node, cible_x: int, cible_y: int) -> bool:
 	if not cible:
 		return false
 	if not _a_ligne_de_vue(joueur.grid_x, joueur.grid_y, cible_x, cible_y):
-		print("Flèche bloquée — pas de ligne de vue !")
 		return false
 
 	_consommer_ressources(joueur, sort)
@@ -291,42 +311,40 @@ func _sort_archer_fleche(joueur: Node, sort: Resource, cible: Node, cible_x: int
 	cible.recevoir_degats(degats_principal)
 	joueur.gagner_gold_sur_degats(degats_principal)
 
-	# Rebond sur la cible la plus proche dans un rayon de 2 cases autour de la cible initiale
+	# Rebond sur la cible la plus proche dans un rayon de RAYON_REBOND_FLECHE cases
 	var cible_rebond : Node = _trouver_cible_rebond(joueur, cible)
 	if cible_rebond:
 		cible_rebond.recevoir_degats(DEGATS_REBOND_FLECHE)
 		joueur.gagner_gold_sur_degats(DEGATS_REBOND_FLECHE)
-
+		_log("🏹 %s → %s — %d dmg (rebond → %s)" % [joueur.name, cible.name, degats_principal, cible_rebond.name], joueur)
+	else:
+		_log("🏹 %s → %s — %d dmg" % [joueur.name, cible.name, degats_principal], joueur)
 	return true
 
 
-func _sort_archer_piege(joueur: Node, sort: Resource, cible_x: int, cible_y: int) -> bool:
-	# Empêche de poser un piège sur une case occupée ou invalide
+func _sort_archer_piege(joueur: Node, sort: Sort, cible_x: int, cible_y: int) -> bool:
 	if _get_joueur_en(cible_x, cible_y) != null:
-		print("Impossible — un joueur est sur cette case !")
 		return false
 	if board.get_case(cible_x, cible_y) in [board.CaseType.VIDE, board.CaseType.MUR]:
-		print("Impossible — case invalide pour un piège !")
 		return false
 
 	_consommer_ressources(joueur, sort)
 	pieges_actifs.append({ "x": cible_x, "y": cible_y, "poseur": joueur })
-	renderer.queue_redraw()
+	renderer.rafraichir()
+	_log("🪤 %s pose un Piège en (%d,%d)" % [joueur.name, cible_x, cible_y], joueur)
 	return true
 
 
-func _sort_archer_tir_cible(joueur: Node, sort: Resource, cible: Node, cible_x: int, cible_y: int) -> bool:
+func _sort_archer_tir_cible(joueur: Node, sort: Sort, cible: Node, cible_x: int, cible_y: int) -> bool:
 	if not cible:
 		return false
 	if not _a_ligne_de_vue(joueur.grid_x, joueur.grid_y, cible_x, cible_y):
-		print("Tir Ciblé bloqué — pas de ligne de vue !")
 		return false
 
 	var est_en_foret : bool = board.get_case(cible_x, cible_y) == board.CaseType.FORET
 
 	# Vérifie le Gold supplémentaire requis si la cible est en Forêt
 	if est_en_foret and joueur.gold < COUT_GOLD_TIR_FORET:
-		print("Pas assez de Gold pour Tir Ciblé en Forêt ! (%d requis)" % COUT_GOLD_TIR_FORET)
 		return false
 
 	_consommer_ressources(joueur, sort)
@@ -338,20 +356,20 @@ func _sort_archer_tir_cible(joueur: Node, sort: Resource, cible: Node, cible_x: 
 	var degats_finaux : int = DEGATS_TIR_CIBLE_FORET if est_en_foret else (sort.degats + joueur.bonus_degats_sorts)
 	cible.recevoir_degats(degats_finaux)
 	joueur.gagner_gold_sur_degats(degats_finaux)
-
+	_log("🎯 %s — Tir Ciblé sur %s — %d dmg%s" % [joueur.name, cible.name, degats_finaux, " (forêt)" if est_en_foret else ""], joueur)
 	return true
 
 
-func _sort_archer_pluie_fleches(joueur: Node, sort: Resource, cible_x: int, cible_y: int) -> bool:
+func _sort_archer_pluie_fleches(joueur: Node, sort: Sort, cible_x: int, cible_y: int) -> bool:
 	_consommer_ressources(joueur, sort)
 
 	# Transforme les cases dans un rayon 1 en Forêt temporaire
-	var cases_transformees : Array = []
+	var cases_transformees : Array[Dictionary] = []
 	for dx in range(-1, 2):
 		for dy in range(-1, 2):
 			var x : int = cible_x + dx
 			var y : int = cible_y + dy
-			if x < 0 or x >= 8 or y < 0 or y >= 8:
+			if x < 0 or x >= board.TAILLE_PLATEAU or y < 0 or y >= board.TAILLE_PLATEAU:
 				continue
 			if board.get_case(x, y) in [board.CaseType.VIDE, board.CaseType.MUR, board.CaseType.TOUR]:
 				continue
@@ -364,7 +382,8 @@ func _sort_archer_pluie_fleches(joueur: Node, sort: Resource, cible_x: int, cibl
 		"lanceur"        : joueur
 	})
 
-	renderer.queue_redraw()
+	renderer.rafraichir()
+	_log("🌧 %s — Pluie de Flèches en (%d,%d) !" % [joueur.name, cible_x, cible_y], joueur)
 	return true
 
 
@@ -372,16 +391,13 @@ func _sort_archer_pluie_fleches(joueur: Node, sort: Resource, cible_x: int, cibl
 # SORTS FRIPON
 # =======================================================
 
-func _sort_fripon_ruee(joueur: Node, sort: Resource, cible: Node, cible_x: int, cible_y: int) -> bool:
-	# La Ruée ne peut se déclencher que sur les cases valides
+func _sort_fripon_ruee(joueur: Node, sort: Sort, cible: Node, cible_x: int, cible_y: int) -> bool:
 	var type_case : int = board.get_case(cible_x, cible_y)
 	if type_case in [board.CaseType.VIDE, board.CaseType.MUR]:
-		print("Ruée impossible — case infranchissable !")
 		return false
 
-	# La Ruée nécessite d'avoir été rechargée (3 attaques)
+	# La Ruée nécessite d'avoir été rechargée (ATTAQUES_POUR_RUEE attaques)
 	if not joueur.ruee_disponible:
-		print("Ruée non disponible — %d attaque(s) restante(s)" % (ATTAQUES_POUR_RUEE - joueur.attaques_depuis_ruee))
 		return false
 
 	var case_arrivee : Vector2i
@@ -390,7 +406,6 @@ func _sort_fripon_ruee(joueur: Node, sort: Resource, cible: Node, cible_x: int, 
 		# Cible ennemie → on se place à côté et on inflige des dégâts
 		case_arrivee = _trouver_case_libre_pres(cible_x, cible_y, joueur)
 		if case_arrivee == Vector2i(-1, -1):
-			print("Aucune case libre autour de la cible !")
 			return false
 		var degats : int = sort.degats + joueur.bonus_degats_sorts
 		cible.recevoir_degats(degats)
@@ -413,11 +428,15 @@ func _sort_fripon_ruee(joueur: Node, sort: Resource, cible: Node, cible_x: int, 
 	joueur.a_attaque_ce_tour = false
 
 	effects_handler.appliquer_effet_case(joueur)
-	renderer.queue_redraw()
+	renderer.rafraichir()
+	if cible:
+		_log("⚡ %s — Ruée sur %s — %d dmg" % [joueur.name, cible.name, sort.degats + joueur.bonus_degats_sorts], joueur)
+	else:
+		_log("⚡ %s — Ruée vers (%d,%d)" % [joueur.name, cible_x, cible_y], joueur)
 	return true
 
 
-func _sort_fripon_derobade(joueur: Node, sort: Resource, cible: Node) -> bool:
+func _sort_fripon_derobade(joueur: Node, sort: Sort, cible: Node) -> bool:
 	# Si une marque est déjà active → explosion immédiate (fallback)
 	# Le cas principal est géré dans input_handler via _exploser_marque_derobade()
 	if joueur.get("marque_cible") != null:
@@ -426,35 +445,35 @@ func _sort_fripon_derobade(joueur: Node, sort: Resource, cible: Node) -> bool:
 
 	# Sinon → pose de la marque sur l'ennemi ciblé
 	if not cible:
-		print("Dérobade : cible ennemie requise !")
 		return false
 
-	joueur.pm_actuels -= sort.cout_pm
+	joueur.pm_actuels            -= sort.cout_pm
 	sort.declencher_cooldown()
 	joueur.marque_cible          = cible
-	joueur.marque_tours_restants = 3
+	joueur.marque_tours_restants = DUREE_MARQUE_DEROBADE
+	_log("👤 %s — Dérobade posée sur %s" % [joueur.name, cible.name], joueur)
 	return true
 
 
-func _sort_fripon_lame(joueur: Node, sort: Resource) -> bool:
-	# Pas de cible — s'active sur soi-même
+func _sort_fripon_lame(joueur: Node, sort: Sort) -> bool:
 	joueur.pm_actuels -= sort.cout_pm
 	sort.declencher_cooldown()
 	joueur.lame_active = true
+	_log("🗡️ %s — Lame Empoisonnée activée" % joueur.name, joueur)
 	return true
 
 
-func _sort_fripon_frenesie(joueur: Node, sort: Resource) -> bool:
+func _sort_fripon_frenesie(joueur: Node, sort: Sort) -> bool:
 	# Coût réduit par la Potion de Frénésie si achetée
 	var cout_final : int = max(0, sort.cout_gold - joueur.reduction_cout_frenesie)
 	if joueur.gold < cout_final:
-		print("Pas assez de Gold pour Frénésie !")
 		return false
 
 	joueur.gold       -= cout_final
 	joueur.pm_actuels -= sort.cout_pm
 	sort.declencher_cooldown()
 	joueur.frenesie_active = true
+	_log("🌀 %s — Frénésie activée !" % joueur.name, joueur)
 	return true
 
 
@@ -464,22 +483,18 @@ func _sort_fripon_frenesie(joueur: Node, sort: Resource) -> bool:
 # Redirige les sorts offensifs vers une mine d'or.
 # Les sorts utilitaires sont bloqués proprement.
 # =======================================================
-func _utiliser_sort_sur_mine(joueur: Node, sort: Resource, cible_x: int, cible_y: int, _mine: Dictionary) -> bool:
+func _utiliser_sort_sur_mine(joueur: Node, sort: Sort, cible_x: int, cible_y: int, _mine: Dictionary) -> bool:
 	if sort.id in SORTS_INAPPLICABLES_SUR_MINE:
-		print("Ce sort ne peut pas cibler une mine !")
 		return false
 
 	# Vérifie portée et ressources avant d'attaquer la mine
 	var portee_effective : int = sort.portee + joueur.bonus_range_sorts
 	var distance         : int = abs(cible_x - joueur.grid_x) + abs(cible_y - joueur.grid_y)
 	if sort.portee != 0 and distance > portee_effective:
-		print("Mine hors de portée du sort !")
 		return false
 	if joueur.pm_actuels < sort.cout_pm:
-		print("Pas assez de PM !")
 		return false
 	if joueur.gold < sort.cout_gold:
-		print("Pas assez de Gold !")
 		return false
 
 	var degats : int = sort.degats + joueur.bonus_degats_sorts
@@ -488,7 +503,7 @@ func _utiliser_sort_sur_mine(joueur: Node, sort: Resource, cible_x: int, cible_y
 	sort.declencher_cooldown()
 	joueur.gagner_gold_sur_degats(degats)
 	event_manager.attaquer_mine(cible_x, cible_y, degats, joueur)
-	renderer.queue_redraw()
+	renderer.rafraichir()
 	return true
 
 
@@ -505,15 +520,14 @@ func exploser_meteore(meteore: Dictionary) -> void:
 	var cx      : int  = meteore["cible_x"]
 	var cy      : int  = meteore["cible_y"]
 	var lanceur : Node = meteore["lanceur"]
-	print("☄️ IMPACT du Météore en (%d,%d) !" % [cx, cy])
 
-	var cases_transformees : Array = []
+	var cases_transformees : Array[Dictionary] = []
 
 	for dx in range(-RAYON_METEORE, RAYON_METEORE + 1):
 		for dy in range(-RAYON_METEORE, RAYON_METEORE + 1):
 			var x : int = cx + dx
 			var y : int = cy + dy
-			if x < 0 or x >= 8 or y < 0 or y >= 8:
+			if x < 0 or x >= board.TAILLE_PLATEAU or y < 0 or y >= board.TAILLE_PLATEAU:
 				continue
 
 			# Inflige des dégâts à tout joueur dans la zone
@@ -531,19 +545,17 @@ func exploser_meteore(meteore: Dictionary) -> void:
 			board.plateau[x][y] = board.CaseType.LAVE
 
 	laves_temporaires.append({ "cases": cases_transformees, "tours_restants": DUREE_LAVE_METEORE })
-	renderer.queue_redraw()
-	print("🔥 %d case(s) → Lave" % cases_transformees.size())
+	renderer.rafraichir()
 
 
 # -------------------------------------------------------
 # Explose la marque Dérobade du Fripon.
 # Inflige des dégâts à la cible marquée.
-# Synergie Lame : +10 dmg + DoT si la Lame est active.
+# Synergie Lame : +DEGATS_LAME_DEROBADE dmg + DoT si la Lame est active.
 # -------------------------------------------------------
 func exploser_marque_derobade(fripon: Node) -> void:
 	var cible : Node = fripon.marque_cible
 	if not cible or cible.est_mort:
-		print("Dérobade — cible invalide ou déjà morte")
 		fripon.marque_cible = null
 		return
 
@@ -563,11 +575,10 @@ func exploser_marque_derobade(fripon: Node) -> void:
 	fripon.attaques_depuis_ruee += 1
 	if not fripon.ruee_disponible and fripon.attaques_depuis_ruee >= ATTAQUES_POUR_RUEE:
 		fripon.ruee_disponible = true
-		print("🗡️ Ruée déverrouillée via explosion Dérobade !")
 
 	# On efface la marque après l'explosion
 	fripon.marque_cible = null
-	renderer.queue_redraw()
+	renderer.rafraichir()
 
 
 # =======================================================
@@ -575,7 +586,7 @@ func exploser_marque_derobade(fripon: Node) -> void:
 # =======================================================
 
 # -------------------------------------------------------
-# Repousse un joueur de N cases dans la direction
+# Repousse un joueur de nb_cases cases dans la direction
 # attaquant → cible. Retourne true si bloqué par un mur.
 # -------------------------------------------------------
 func _repousser_joueur(attaquant: Node, cible: Node, nb_cases: int) -> bool:
@@ -591,7 +602,7 @@ func _repousser_joueur(attaquant: Node, cible: Node, nb_cases: int) -> bool:
 	for _i in range(nb_cases):
 		var test_x : int = pos_x + dir_x
 		var test_y : int = pos_y + dir_y
-		if test_x < 0 or test_x >= 8 or test_y < 0 or test_y >= 8:
+		if test_x < 0 or test_x >= board.TAILLE_PLATEAU or test_y < 0 or test_y >= board.TAILLE_PLATEAU:
 			bloque_obstacle = true
 			break
 		var type_case : int = board.get_case(test_x, test_y)
@@ -674,8 +685,7 @@ func _a_ligne_de_vue(x1: int, y1: int, x2: int, y2: int) -> bool:
 # Retourne Vector2i(-1, -1) si aucune case disponible.
 # -------------------------------------------------------
 func _trouver_case_libre_pres(x: int, y: int, joueur_qui_cherche: Node) -> Vector2i:
-	# On vérifie les 4 cases cardinales
-	var directions : Array = [
+	var directions : Array[Vector2i] = [
 		Vector2i(0, -1),  # Haut
 		Vector2i(0,  1),  # Bas
 		Vector2i(-1, 0),  # Gauche
@@ -684,7 +694,7 @@ func _trouver_case_libre_pres(x: int, y: int, joueur_qui_cherche: Node) -> Vecto
 	for dir in directions:
 		var tx : int = x + dir.x
 		var ty : int = y + dir.y
-		if tx < 0 or tx >= 8 or ty < 0 or ty >= 8:
+		if tx < 0 or tx >= board.TAILLE_PLATEAU or ty < 0 or ty >= board.TAILLE_PLATEAU:
 			continue
 		var type_case : int = board.get_case(tx, ty)
 		if type_case in [board.CaseType.VIDE, board.CaseType.MUR]:
@@ -703,10 +713,16 @@ func _trouver_case_libre_pres(x: int, y: int, joueur_qui_cherche: Node) -> Vecto
 # Consomme PM, Gold et déclenche le cooldown d'un sort.
 # Factorisé pour éviter la répétition dans chaque sort.
 # -------------------------------------------------------
-func _consommer_ressources(joueur: Node, sort: Resource) -> void:
+func _consommer_ressources(joueur: Node, sort: Sort) -> void:
 	joueur.pm_actuels -= sort.cout_pm
 	joueur.gold       -= sort.cout_gold
 	sort.declencher_cooldown()
+
+
+func _log(message: String, joueur: Node = null) -> void:
+	if log_ui == null:
+		return
+	log_ui.ajouter(message, joueur)
 
 
 # -------------------------------------------------------

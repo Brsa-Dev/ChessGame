@@ -9,9 +9,9 @@
 #   - Coup de Bouclier — dégâts + repousse (+ impact mur)
 #   - Rage Berserker — buff offensif/défensif 2 tours
 # =======================================================
-extends "res://joueur.gd"
+extends Object
 
-static func creer_sorts() -> Array:
+static func creer_sorts() -> Array[Sort]:
 	const SortScript = preload("res://sort.gd")
 	return [
 		# Sort 1 — Mur (touche A)
