@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://cvrd23mk47faq"
-path="res://.godot/imported/case_eau.glb-f198865e46627e35e211280a6a5f91d5.scn"
+uid="uid://566iex1qchvq"
+path="res://.godot/imported/tas_pieces.glb-f16e96e0bf358cb1495d581a1f1ec692.scn"
 
 [deps]
 
-source_file="res://Assets/Cases/case_eau.glb"
-dest_files=["res://.godot/imported/case_eau.glb-f198865e46627e35e211280a6a5f91d5.scn"]
+source_file="res://Assets/Evenements/tas_pieces.glb"
+dest_files=["res://.godot/imported/tas_pieces.glb-f16e96e0bf358cb1495d581a1f1ec692.scn"]
 
 [params]
 

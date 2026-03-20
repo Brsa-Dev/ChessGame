@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://cvrd23mk47faq"
-path="res://.godot/imported/case_eau.glb-f198865e46627e35e211280a6a5f91d5.scn"
+uid="uid://dl82gs4m7okny"
+path="res://.godot/imported/kunai.glb-64cd14149004f9f6f4bfff4c8745266a.scn"
 
 [deps]
 
-source_file="res://Assets/Cases/case_eau.glb"
-dest_files=["res://.godot/imported/case_eau.glb-f198865e46627e35e211280a6a5f91d5.scn"]
+source_file="res://Assets/Personnages/fripon/kunai.glb"
+dest_files=["res://.godot/imported/kunai.glb-64cd14149004f9f6f4bfff4c8745266a.scn"]
 
 [params]
 

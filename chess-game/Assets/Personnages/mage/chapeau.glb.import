@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://cvrd23mk47faq"
-path="res://.godot/imported/case_eau.glb-f198865e46627e35e211280a6a5f91d5.scn"
+uid="uid://dtyklx7bcvbp0"
+path="res://.godot/imported/chapeau.glb-e64eb26336ddc520fa0873da398c28e6.scn"
 
 [deps]
 
-source_file="res://Assets/Cases/case_eau.glb"
-dest_files=["res://.godot/imported/case_eau.glb-f198865e46627e35e211280a6a5f91d5.scn"]
+source_file="res://Assets/Personnages/mage/chapeau.glb"
+dest_files=["res://.godot/imported/chapeau.glb-e64eb26336ddc520fa0873da398c28e6.scn"]
 
 [params]
 

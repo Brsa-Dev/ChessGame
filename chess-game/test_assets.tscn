@@ -1,14 +1,27 @@
 [gd_scene format=3 uid="uid://cnyrhgghr12l4"]
 
-[ext_resource type="PackedScene" uid="uid://cqkgyta1gdvgt" path="res://Assets/Cases/case_tour.glb" id="1_8wqhx"]
-[ext_resource type="PackedScene" uid="uid://cb2brkf3bcq7r" path="res://Assets/Cases/case_lave.glb" id="2_8om2v"]
-[ext_resource type="PackedScene" uid="uid://dm4qiqprp332d" path="res://Assets/Cases/case_eau.glb" id="3_5suet"]
-[ext_resource type="PackedScene" uid="uid://o0p4bbw0ouhb" path="res://Assets/Cases/case_foret.glb" id="4_vt8f4"]
-[ext_resource type="PackedScene" uid="uid://dwh7xr06gjfgo" path="res://Assets/Cases/case_mur.glb" id="5_ksan8"]
-[ext_resource type="PackedScene" uid="uid://v0s3iyhdi5px" path="res://Assets/Cases/case_normal_black.glb" id="6_ksan8"]
-[ext_resource type="PackedScene" uid="uid://dyak1hwr7lv1l" path="res://Assets/Cases/case_normal_white.glb" id="7_4vq04"]
+[ext_resource type="PackedScene" uid="uid://ddcyhc5ibis1i" path="res://Assets/Cases/case_tour.glb" id="1_8wqhx"]
+[ext_resource type="PackedScene" uid="uid://kuk5pc245wgp" path="res://Assets/Cases/case_lave.glb" id="2_8om2v"]
+[ext_resource type="PackedScene" uid="uid://cvrd23mk47faq" path="res://Assets/Cases/case_eau.glb" id="3_5suet"]
+[ext_resource type="PackedScene" uid="uid://c6gvs1ud7omjm" path="res://Assets/Cases/case_foret.glb" id="4_vt8f4"]
+[ext_resource type="PackedScene" uid="uid://t1kefrcruu0x" path="res://Assets/Cases/case_mur.glb" id="5_ksan8"]
+[ext_resource type="PackedScene" uid="uid://bbmj2d53vpb5" path="res://Assets/Cases/case_normal_black.glb" id="6_ksan8"]
+[ext_resource type="PackedScene" uid="uid://oc44mioj2tfm" path="res://Assets/Cases/case_normal_white.glb" id="7_4vq04"]
 [ext_resource type="PackedScene" uid="uid://chjb2pnoe8lsq" path="res://Assets/Personnages/pion_blanc.glb" id="8_ix0es"]
 [ext_resource type="PackedScene" uid="uid://bkw530tskkgqm" path="res://Assets/Personnages/pion_noir.glb" id="9_wa6xy"]
+[ext_resource type="PackedScene" uid="uid://cgyyd2hdjewoh" path="res://Assets/Personnages/mage/grimoire.glb" id="10_3hmmy"]
+[ext_resource type="PackedScene" uid="uid://cfqhap8ird33e" path="res://Assets/Personnages/guerrier/bouclier.glb" id="10_eurfa"]
+[ext_resource type="PackedScene" uid="uid://bk54fx07iajj5" path="res://Assets/Personnages/guerrier/hache.glb" id="12_3hmmy"]
+[ext_resource type="PackedScene" uid="uid://dtyklx7bcvbp0" path="res://Assets/Personnages/mage/chapeau.glb" id="13_djsju"]
+[ext_resource type="PackedScene" uid="uid://orgrmom3kmdj" path="res://Assets/Personnages/archer/arc.glb" id="14_s0mxy"]
+[ext_resource type="PackedScene" uid="uid://c8vbjeurru7ts" path="res://Assets/Personnages/archer/carquois.glb" id="15_chq4s"]
+[ext_resource type="PackedScene" uid="uid://b8fmlapcw023r" path="res://Assets/Personnages/archer/piege.glb" id="16_5ohqu"]
+[ext_resource type="PackedScene" uid="uid://dl82gs4m7okny" path="res://Assets/Personnages/fripon/kunai.glb" id="17_oxywm"]
+[ext_resource type="PackedScene" uid="uid://cts5gyyvrl5el" path="res://Assets/Evenements/charriot.glb" id="18_jc0j4"]
+[ext_resource type="PackedScene" uid="uid://blebef88gpyfy" path="res://Assets/Evenements/coffre.glb" id="19_yr8an"]
+[ext_resource type="PackedScene" uid="uid://566iex1qchvq" path="res://Assets/Evenements/tas_pieces.glb" id="20_75jb7"]
+[ext_resource type="PackedScene" uid="uid://bqosli1tf52s6" path="res://Assets/Personnages/sherif/chapeau.glb" id="21_kexnf"]
+[ext_resource type="PackedScene" uid="uid://bdf3m77k3lcen" path="res://Assets/Personnages/sherif/flask.glb" id="22_jbgjr"]
 
 [node name="TestAssets" type="Node3D" unique_id=77294035]
 
@@ -21,29 +34,119 @@ size = 20.644823
 transform = Transform3D(-0.0046598017, -0.9703124, -0.24181, 0.77512157, -0.1562824, 0.61217844, -0.631795, -0.18457948, 0.7528384, -0.98823047, 13.652905, 19.853569)
 shadow_enabled = true
 
-[node name="case_eau2" parent="." unique_id=346228264 instance=ExtResource("3_5suet")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, -3)
+[node name="pion_blanc" parent="." unique_id=657887169 instance=ExtResource("8_ix0es")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 0.2)
 
-[node name="case_foret2" parent="." unique_id=1951673696 instance=ExtResource("4_vt8f4")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, -2)
+[node name="pion_noir" parent="." unique_id=1170733585 instance=ExtResource("9_wa6xy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.1, 1.6)
 
-[node name="case_lave2" parent="." unique_id=1798539185 instance=ExtResource("2_8om2v")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, -1)
+[node name="case_eau2" parent="." unique_id=1234448136 instance=ExtResource("3_5suet")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -4)
 
-[node name="case_mur2" parent="." unique_id=134730218 instance=ExtResource("5_ksan8")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 0)
+[node name="case_foret2" parent="." unique_id=744463310 instance=ExtResource("4_vt8f4")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -2.6)
 
-[node name="case_tour" parent="." unique_id=1263163629 instance=ExtResource("1_8wqhx")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 3)
+[node name="case_lave2" parent="." unique_id=398853029 instance=ExtResource("2_8om2v")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1.2)
 
-[node name="case_normal_black2" parent="." unique_id=1996156576 instance=ExtResource("6_ksan8")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 1)
+[node name="case_mur2" parent="." unique_id=1772677833 instance=ExtResource("5_ksan8")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -5.4)
 
-[node name="case_normal_white" parent="." unique_id=203559133 instance=ExtResource("7_4vq04")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, 2)
+[node name="case_normal_black2" parent="." unique_id=1267617085 instance=ExtResource("6_ksan8")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.2)
 
-[node name="pion_blanc" parent="." unique_id=968074270 instance=ExtResource("8_ix0es")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0, 1)
+[node name="case_normal_white" parent="." unique_id=1929119297 instance=ExtResource("7_4vq04")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.6)
 
-[node name="pion_noir" parent="." unique_id=984430108 instance=ExtResource("9_wa6xy")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 0, 2)
+[node name="case_tour" parent="." unique_id=1764958322 instance=ExtResource("1_8wqhx")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3)
+
+[node name="grimoire" parent="." unique_id=1949213587 instance=ExtResource("10_3hmmy")]
+transform = Transform3D(-4.371139e-08, 0, -1, 0, 1, 0, 1, 0, -4.371139e-08, -3, 0, 0.2)
+
+[node name="bouclier" parent="." unique_id=1621586063 instance=ExtResource("10_eurfa")]
+transform = Transform3D(1.9106857e-15, -7.301438e-30, -1, 4.371139e-08, 1, 1.59578e-37, 1, -4.371139e-08, 1.9106855e-15, -3, 0, 1.6)
+
+[node name="hache" parent="." unique_id=1842391130 instance=ExtResource("12_3hmmy")]
+transform = Transform3D(-8.881784e-16, 1, -2.9802322e-08, 4.371139e-08, 2.9802322e-08, 1, 1, 0, -4.371139e-08, -1.6, 0, 1.6)
+
+[node name="chapeau" parent="." unique_id=1121550113 instance=ExtResource("13_djsju")]
+transform = Transform3D(-0.96592593, 0.25881907, 8.7422784e-08, 0.25881907, 0.96592593, 0, -8.444392e-08, 2.262668e-08, -1, -1.6999998, 0.49999988, 0.19999999)
+
+[node name="arc" parent="." unique_id=1465021777 instance=ExtResource("14_s0mxy")]
+transform = Transform3D(1, -4.3711392e-08, -4.371139e-08, -4.371139e-08, -1, 8.742278e-08, -4.37114e-08, -8.742278e-08, -1, -1.6, 0, -1.4)
+
+[node name="carquois" parent="." unique_id=811411470 instance=ExtResource("15_chq4s")]
+transform = Transform3D(-0.087155715, 0.9961947, 0, -0.9961947, -0.087155715, 0, 0, 0, 1, -2.6000001, 0, -1.3)
+
+[node name="piege" parent="." unique_id=1147560313 instance=ExtResource("16_5ohqu")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.1, 1.4901161e-08, -1.4)
+
+[node name="kunai" parent="." unique_id=1431682413 instance=ExtResource("17_oxywm")]
+transform = Transform3D(-5.9604645e-08, -1, 0, -4.371139e-08, 2.6054018e-15, -1, 1, -5.9604645e-08, -4.371139e-08, -1.5999999, 0, -2.6)
+
+[node name="charriot" parent="." unique_id=1566009480 instance=ExtResource("18_jc0j4")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.6, 0.4, -4.0000005)
+
+[node name="coffre" parent="." unique_id=222190380 instance=ExtResource("19_yr8an")]
+transform = Transform3D(-1, 0, 8.742278e-08, 0, 1, 0, -8.742278e-08, 0, -1, -3, 0.20000002, -4)
+
+[node name="tas_pieces2" parent="." unique_id=1837459410 instance=ExtResource("20_75jb7")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.1, 0, -4)
+
+[node name="grimoire2" parent="." unique_id=302650281 instance=ExtResource("10_3hmmy")]
+transform = Transform3D(-2.5071822e-08, 0.819152, 0.57357645, 3.5806274e-08, 0.57357645, -0.819152, -1, -2.1175824e-22, -4.3711385e-08, -0.6, 0.7, -10.700001)
+
+[node name="chapeau2" parent="." unique_id=1697423898 instance=ExtResource("21_kexnf")]
+transform = Transform3D(0.96592575, 0.25881904, 0, -0.25881904, 0.96592575, 0, 0, 0, 1, 0.1, 1.3000001, -15.6)
+
+[node name="flask" parent="." unique_id=368764158 instance=ExtResource("22_jbgjr")]
+transform = Transform3D(0.25000003, -0.25881904, -0.93301266, 0.066987306, 0.9659258, -0.25, 0.9659258, 0, 0.25881907, 0, 0.7, -16.1)
+
+[node name="pion_blanc2" parent="." unique_id=2068911501 instance=ExtResource("8_ix0es")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.100000024, -9.6)
+
+[node name="pion_noir2" parent="." unique_id=866987904 instance=ExtResource("9_wa6xy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.100000024, -8.2)
+
+[node name="bouclier2" parent="." unique_id=2057013382 instance=ExtResource("10_eurfa")]
+transform = Transform3D(-0.5, -0.8660254, 7.5710346e-08, 7.9789e-38, -8.742278e-08, -1, 0.8660254, -0.5, 4.3711392e-08, -0.39999986, 0.49999985, -12.599998)
+
+[node name="arc2" parent="." unique_id=930673462 instance=ExtResource("14_s0mxy")]
+transform = Transform3D(0.087155804, 1.7813348e-07, 0.99619466, 0.99619466, -1.558466e-08, -0.08715579, 0, 0.9999999, -1.788139e-07, -0.20000136, 0.6999999, -9.200001)
+
+[node name="kunai2" parent="." unique_id=1089285697 instance=ExtResource("17_oxywm")]
+transform = Transform3D(0.50977856, -0.85962796, 0.034148257, -0.8600897, -0.5083597, 0.0426178, -0.019275796, -0.05109645, -0.9985076, -0.099999905, 0.7000002, -7.9000015)
+
+[node name="carquois2" parent="." unique_id=1618144679 instance=ExtResource("15_chq4s")]
+transform = Transform3D(0.939693, -0.34202027, 0, 0.34202027, 0.939693, 0, 0, 0, 1, 0.6266091, 1.0901072, -9.6)
+
+[node name="pion_blanc3" parent="." unique_id=366503646 instance=ExtResource("8_ix0es")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.100000024, -12.400002)
+
+[node name="pion_noir3" parent="." unique_id=1843261557 instance=ExtResource("9_wa6xy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.100000024, -11)
+
+[node name="case_normal_black3" parent="." unique_id=187836291 instance=ExtResource("6_ksan8")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -12.400002)
+
+[node name="case_normal_white2" parent="." unique_id=1795818647 instance=ExtResource("7_4vq04")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -11)
+
+[node name="pion_noir4" parent="." unique_id=1864596165 instance=ExtResource("9_wa6xy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.100000024, -15.599998)
+
+[node name="case_normal_white3" parent="." unique_id=2086681854 instance=ExtResource("7_4vq04")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -15.599998)
+
+[node name="hache2" parent="." unique_id=386679992 instance=ExtResource("12_3hmmy")]
+transform = Transform3D(0.86602545, -0.4999999, -3.499956e-08, 0.4999999, 0.86602545, -5.461979e-08, 5.7620454e-08, 2.9802322e-08, 1, 1.1920929e-07, 0.59999996, -11.899998)
+
+[node name="chapeau3" parent="." unique_id=1732761603 instance=ExtResource("13_djsju")]
+transform = Transform3D(-0.96592593, 0.25881895, 2.5631067e-07, 0.2588191, 0.9659255, -4.525338e-08, -2.592895e-07, 2.2626674e-08, -1, 0.1714828, 1.7429701, -11)
+
+[node name="case_normal_black4" parent="." unique_id=35268981 instance=ExtResource("6_ksan8")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -9.6)
+
+[node name="case_normal_white4" parent="." unique_id=231945254 instance=ExtResource("7_4vq04")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -8.2)

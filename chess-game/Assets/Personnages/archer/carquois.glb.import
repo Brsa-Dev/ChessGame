@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://cvrd23mk47faq"
-path="res://.godot/imported/case_eau.glb-f198865e46627e35e211280a6a5f91d5.scn"
+uid="uid://c8vbjeurru7ts"
+path="res://.godot/imported/carquois.glb-bcf6b7e1f7719d2596d7f658afb5eb94.scn"
 
 [deps]
 
-source_file="res://Assets/Cases/case_eau.glb"
-dest_files=["res://.godot/imported/case_eau.glb-f198865e46627e35e211280a6a5f91d5.scn"]
+source_file="res://Assets/Personnages/archer/carquois.glb"
+dest_files=["res://.godot/imported/carquois.glb-bcf6b7e1f7719d2596d7f658afb5eb94.scn"]
 
 [params]
 

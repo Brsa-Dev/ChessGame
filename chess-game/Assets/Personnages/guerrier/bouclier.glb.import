@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://cvrd23mk47faq"
-path="res://.godot/imported/case_eau.glb-f198865e46627e35e211280a6a5f91d5.scn"
+uid="uid://cfqhap8ird33e"
+path="res://.godot/imported/bouclier.glb-8bb8b9963bb4501ce6b1f8e49da1a877.scn"
 
 [deps]
 
-source_file="res://Assets/Cases/case_eau.glb"
-dest_files=["res://.godot/imported/case_eau.glb-f198865e46627e35e211280a6a5f91d5.scn"]
+source_file="res://Assets/Personnages/guerrier/bouclier.glb"
+dest_files=["res://.godot/imported/bouclier.glb-8bb8b9963bb4501ce6b1f8e49da1a877.scn"]
 
 [params]
 
