@@ -1,283 +1,258 @@
 # =======================================================
 # Board/renderer.gd
 # -------------------------------------------------------
-# Responsabilité UNIQUE : affichage visuel du plateau.
+# Responsabilité UNIQUE : affichage visuel 3D du plateau.
 #
-#   - Dessin des cases (losanges isométriques colorés)
-#   - Dessin des joueurs (cercles colorés + numéro)
-#   - Surbrillances (déplacement jaune, attaque rouge, sort violet)
-#   - Dessin des événements (mines, tas de pièces, coffres)
+#   - Instancie les modèles .glb des cases sur la grille
+#   - Gère les pions joueurs (Étape B)
+#   - Surbrillances déplacement / attaque / sort (Étape C)
+#   - Événements : mines, coffres, tas de pièces (Étape E)
 #
 # NE contient PAS de logique de gameplay.
 # Toutes les données viennent des références injectées par main.gd.
+#
+# Passage 2D → 3D :
+#   - grid_to_screen()  →  grid_to_world()
+#   - draw_colored_polygon() → instanciation de .glb
+#   - queue_redraw()    →  rafraichir()
 # =======================================================
-extends Node2D
-
-
-# =======================================================
-# CONSTANTES — Dimensions isométriques
-# =======================================================
-
-const TILE_W           : int = 128  # Largeur d'une case en pixels
-const TILE_H           : int = 64   # Hauteur d'une case en pixels
-const TAILLE_PLATEAU   : int = 8    # Doit correspondre à board.TAILLE_PLATEAU
+extends Node3D
 
 
 # =======================================================
-# CONSTANTES — Couleurs des cases (indexées par CaseType)
+# CONSTANTES — Grille
 # =======================================================
 
-const COULEURS_CASES : Dictionary = {
-	0: Color(0.85, 0.85, 0.85),  # NORMAL — gris clair
-	1: Color(0.9,  0.3,  0.1 ),  # LAVE   — rouge/orange
-	2: Color(0.2,  0.5,  0.9 ),  # EAU    — bleu
-	3: Color(0.1,  0.1,  0.1 ),  # VIDE   — noir
-	4: Color(0.1,  0.6,  0.1 ),  # FORET  — vert
-	5: Color(0.5,  0.4,  0.3 ),  # MUR    — marron
-	6: Color(0.7,  0.6,  0.1 ),  # TOUR   — doré
-}
+# Taille d'une case en unités Godot (1 case = 1 unité Blender exportée)
+const CASE_SIZE    : float = 1.50
 
 
-# =======================================================
-# CONSTANTES — Couleurs des joueurs (par index dans la liste)
-# =======================================================
+# Nombre de cases du plateau (doit correspondre à board.TAILLE_PLATEAU)
+const TAILLE_PLATEAU : int = 8
 
-const COULEURS_JOUEURS : Array = [
-	Color.YELLOW,  # Joueur 1
-	Color.CYAN,    # Joueur 2
-	Color.GREEN,   # Joueur 3
-]
+# Décalage pour centrer le plateau 8×8 sur l'origine mondiale.
+# Sans offset, le plateau irait de (0,0,0) à (7,0,7).
+# Avec offset (-3.5, 0, -3.5), il est centré sur (0,0,0).
+# La caméra à (10,10,10) pointe vers l'origine → plateau bien cadré.
+const OFFSET_PLATEAU : Vector3 = Vector3(-3.5, 0.0, -3.5)
 
+# Hauteur des plans de surbrillance — légèrement au-dessus des cases
+# pour éviter le Z-fighting avec la surface des .glb
+const HAUTEUR_SURBRILLANCE : float = 0.11
 
-# =======================================================
-# CONSTANTES — Surbrillances
-# =======================================================
-
-const COULEUR_CASE_ACCESSIBLE : Color = Color(1.0, 1.0, 0.3, 0.5)  # Jaune — déplacement possible
-const COULEUR_CASE_ATTAQUABLE : Color = Color(1.0, 0.2, 0.2, 0.5)  # Rouge — ennemi attaquable
-const COULEUR_CASE_SORT       : Color = Color(0.7, 0.2, 1.0, 0.5)  # Violet — portée du sort sélectionné
+# Taille du plan de surbrillance — légèrement plus petit que la case
+# pour que les bords des cases restent visibles
+const TAILLE_SURBRILLANCE  : float = 0.9
 
 
 # =======================================================
-# CONSTANTES — Événements (mines, pièces, coffres)
-# =======================================================
-
-const COULEUR_MINE   : Color = Color(0.85, 0.65, 0.0)  # Doré foncé
-const COULEUR_PIECE  : Color = Color(1.0,  0.85, 0.0)  # Jaune vif
-const COULEUR_COFFRE : Color = Color(0.6,  0.0,  0.8)  # Violet
-
-
-# =======================================================
-# CONSTANTES — Tailles des éléments visuels
-# =======================================================
-
-const RAYON_JOUEUR_NORMAL : float = 14.0  # Joueur inactif
-const RAYON_JOUEUR_ACTIF  : float = 18.0  # Joueur dont c'est le tour
-const RAYON_MINE          : float = 10.0  # Losange de la mine
-const RAYON_PIECE         : float = 6.0   # Tas de pièces
-const RAYON_COFFRE        : float = 8.0   # Coffre au trésor
-const LARGEUR_BARRE_VIE   : float = 24.0  # Largeur de la barre de vie des mines
-const HAUTEUR_BARRE_VIE   : float = 4.0   # Hauteur de la barre de vie des mines
-
-
-# =======================================================
-# RÉFÉRENCES — Injectées par main.gd
-# =======================================================
-
-var board         : Node = null  # board.gd — types des cases
-var event_manager : Node = null  # event_manager.gd — mines, coffres, tas
-
-
-# =======================================================
-# ÉTAT DU RENDERER
+# SCÈNES PRÉCHARGÉES — Cases
 # -------------------------------------------------------
-# Mis à jour par input_handler et main.gd après chaque action.
-# Tout changement doit être suivi d'un queue_redraw().
+# preload() est exécuté à la compilation — pas de latence en jeu.
+# Chaque CaseType a sa scène correspondante.
+# VIDE n'a pas de scène : la case est simplement invisible.
+# =======================================================
+const SCENE_CASE_NORMAL_WHITE : PackedScene = preload("res://Assets/Cases/case_normal_white.glb")
+const SCENE_CASE_NORMAL_BLACK : PackedScene = preload("res://Assets/Cases/case_normal_black.glb")
+const SCENE_CASE_LAVE         : PackedScene = preload("res://Assets/Cases/case_lave.glb")
+const SCENE_CASE_EAU          : PackedScene = preload("res://Assets/Cases/case_eau.glb")
+const SCENE_CASE_FORET        : PackedScene = preload("res://Assets/Cases/case_foret.glb")
+const SCENE_CASE_MUR          : PackedScene = preload("res://Assets/Cases/case_mur.glb")
+const SCENE_CASE_TOUR         : PackedScene = preload("res://Assets/Cases/case_tour.glb")
+
+
+# =======================================================
+# SCÈNES PRÉCHARGÉES — Joueurs
+# -------------------------------------------------------
+# pion_blanc est le corps commun à toutes les classes.
+# Les accessoires distinguent visuellement chaque classe.
+# =======================================================
+const SCENE_PION_BLANC     : PackedScene = preload("res://Assets/Personnages/pion_blanc.glb")
+const SCENE_HACHE          : PackedScene = preload("res://Assets/Personnages/guerrier/hache.glb")
+const SCENE_BOUCLIER       : PackedScene = preload("res://Assets/Personnages/guerrier/bouclier.glb")
+const SCENE_GRIMOIRE       : PackedScene = preload("res://Assets/Personnages/mage/grimoire.glb")
+const SCENE_CHAPEAU_MAGE   : PackedScene = preload("res://Assets/Personnages/mage/chapeau.glb")
+const SCENE_ARC            : PackedScene = preload("res://Assets/Personnages/archer/arc.glb")
+const SCENE_CARQUOIS       : PackedScene = preload("res://Assets/Personnages/archer/carquois.glb")
+const SCENE_KUNAI          : PackedScene = preload("res://Assets/Personnages/fripon/kunai.glb")
+
+
+# =======================================================
+# SCÈNES PRÉCHARGÉES — Événements
+# =======================================================
+const SCENE_MINE       : PackedScene = preload("res://Assets/Evenements/charriot.glb")
+const SCENE_COFFRE     : PackedScene = preload("res://Assets/Evenements/coffre.glb")
+const SCENE_TAS_PIECES : PackedScene = preload("res://Assets/Evenements/tas_pieces.glb")
+
+
+# =======================================================
+# RÉFÉRENCES — Injectées par main.gd dans _ready()
 # =======================================================
 
-var joueurs            : Array = []    # Liste complète des joueurs
-var joueur_actif       : Node  = null  # Joueur dont c'est le tour
-var joueur_selectionne : bool  = false # Un joueur est-il sélectionné ?
-var sort_selectionne   : int   = -1    # Index du sort actif (-1 = aucun)
+var board         : Node  = null  # board.gd — état du plateau
+var event_manager : Node  = null  # event_manager.gd — événements actifs
 
-# Offset de centrage du plateau — recalculé dans _centrer_plateau()
-var _offset : Vector2 = Vector2(440, 80)
+# Liste des joueurs (injectée par main.gd)
+var joueurs : Array = []
+
+# Joueur dont c'est le tour (pour l'affichage actif)
+var joueur_actif : Node = null
+
+# État de sélection — utilisés aux Étapes B et C
+var joueur_selectionne : bool = false
+var sort_selectionne   : int  = -1
+
+# Référence à la Camera3D — injectée par main.gd
+# Nécessaire pour projeter le rayon depuis la caméra vers le sol
+var camera : Camera3D = null
+
+
+# =======================================================
+# ÉTAT INTERNE — Nœuds des cases instanciés
+# -------------------------------------------------------
+# Dictionnaire "x,y" → Node3D instancié sur le plateau.
+# Permet de remplacer une case précise sans tout reconstruire.
+# Ex : quand la Lave temporaire expire, on remet la case NORMAL.
+# =======================================================
+var _noeuds_cases : Dictionary = {}
+
+# Snapshot du dernier type affiché pour chaque case.
+# Sert à détecter les changements dans rafraichir() :
+# on ne remplace un nœud QUE si son type a changé.
+# Format identique : "x,y" → CaseType (int)
+var _types_affiches : Dictionary = {}
+
+# Dictionnaire index_joueur (int) → Node3D racine du pion instancié.
+# Permet de déplacer ou supprimer le pion d'un joueur précis.
+var _noeuds_joueurs : Dictionary = {}
+
+# Liste des nœuds de surbrillance actifs (MeshInstance3D).
+# Tous supprimés et recréés à chaque rafraichir().
+var _noeuds_surbrillances : Array = []
+
+# Nœuds des événements actifs — recréés à chaque rafraichir()
+# Clé : identifiant unique de l'événement ("mine_x_y", "coffre_x_y", etc.)
+var _noeuds_evenements : Dictionary = {}
 
 
 # =======================================================
 # INITIALISATION
 # =======================================================
+
 func _ready() -> void:
-	# Différé pour garantir que le viewport est entièrement initialisé
-	call_deferred("_centrer_plateau")
-
-	# Recentre automatiquement le plateau si la fenêtre est redimensionnée
-	get_viewport().size_changed.connect(_centrer_plateau)
-
-	print("✅ Renderer prêt !")
-
-
-# -------------------------------------------------------
-# Centre le plateau dans la fenêtre en calculant l'offset.
-# L'offset est le point de départ de la case (0,0) en pixels.
-# -------------------------------------------------------
-func _centrer_plateau() -> void:
-	var taille_ecran    : Vector2 = get_viewport().get_visible_rect().size
-	var plateau_hauteur : float   = (TAILLE_PLATEAU - 1) * 2.0 * (TILE_H / 2.0)
-
-	_offset = Vector2(
-		taille_ecran.x / 2.0,
-		(taille_ecran.y - plateau_hauteur) / 2.0
-	)
-
-	queue_redraw()
+	# Les références (board, joueurs...) sont injectées par main.gd
+	# APRÈS _ready(). On construit le plateau dans rafraichir(),
+	# appelé explicitement par main.gd une fois tout injecté.
+	pass
 
 
 # =======================================================
-# DESSIN PRINCIPAL
+# POINT D'ENTRÉE PUBLIC — Mise à jour visuelle
 # -------------------------------------------------------
-# Appelé par Godot à chaque queue_redraw().
-# Ordre strict : plateau → événements → surbrillances → joueurs
+# rafraichir() est la nouvelle API principale (ancienne : queue_redraw()).
+# Appelée par main.gd à chaque changement d'état du jeu.
+#
+# Stratégie : on ne détruit/recrée QUE les cases dont le type
+# a changé depuis le dernier appel. C'est plus performant
+# que de tout reconstruire à chaque fin de tour.
+#
+# queue_redraw() — shim de compatibilité
+# -------------------------------------------------------
+# Node3D n'hérite pas de CanvasItem, donc queue_redraw()
+# n'existe pas nativement. Ce shim redirige les anciens
+# appels de main.gd vers rafraichir() pendant la migration.
+# À supprimer une fois main.gd mis à jour (Étape D).
 # =======================================================
-func _draw() -> void:
-	_dessiner_plateau()
+func queue_redraw() -> void:
+	rafraichir()
 
-	if joueurs.is_empty():
+
+func rafraichir() -> void:
+	if board == null:
+		push_error("renderer.rafraichir() — board est null, injection manquante !")
 		return
 
-	if event_manager != null:
-		_dessiner_evenements()
-
-	if joueur_actif != null and joueur_selectionne:
-		_dessiner_surbrillance_deplacement()
-		_dessiner_surbrillance_attaque()
-		if sort_selectionne >= 0 and sort_selectionne < joueur_actif.sorts.size():
-			_dessiner_surbrillance_sort()
-
-	_dessiner_joueurs()
+	_mettre_a_jour_cases()
+	_mettre_a_jour_joueurs()
+	_mettre_a_jour_surbrillances()
+	_mettre_a_jour_evenements()
 
 
 # =======================================================
-# DESSIN DU PLATEAU
+# CASES — Construction et mise à jour
 # =======================================================
-func _dessiner_plateau() -> void:
+
+# -------------------------------------------------------
+# Parcourt les 64 cases et met à jour uniquement celles
+# dont le type a changé depuis le dernier rafraichir().
+# Premier appel : toutes les cases sont créées.
+# -------------------------------------------------------
+func _mettre_a_jour_cases() -> void:
 	for x in range(TAILLE_PLATEAU):
 		for y in range(TAILLE_PLATEAU):
-			var type_case : int   = board.get_case(x, y) if board != null else 0
-			var couleur   : Color = COULEURS_CASES.get(type_case, Color.WHITE)
-			dessiner_case(x, y, couleur)
+			var cle        : String = "%d,%d" % [x, y]
+			var type_actuel : int   = board.get_case(x, y)
 
-
-# =======================================================
-# DESSIN DES JOUEURS
-# =======================================================
-func _dessiner_joueurs() -> void:
-	for i in range(joueurs.size()):
-		var joueur : Node = joueurs[i]
-		if not joueur.est_place or joueur.est_mort:
-			continue
-
-		var centre : Vector2 = grid_to_screen(joueur.grid_x, joueur.grid_y)
-		var couleur : Color  = COULEURS_JOUEURS[i] if i < COULEURS_JOUEURS.size() else Color.WHITE
-		var rayon   : float  = RAYON_JOUEUR_ACTIF if joueur == joueur_actif else RAYON_JOUEUR_NORMAL
-
-		draw_circle(centre, rayon, couleur)
-
-		# Numéro du joueur centré dans le cercle
-		draw_string(
-			ThemeDB.fallback_font,
-			centre + Vector2(-5, 5),
-			str(i + 1),
-			HORIZONTAL_ALIGNMENT_LEFT,
-			-1,
-			14,
-			Color.BLACK
-		)
-
-
-# =======================================================
-# SURBRILLANCES
-# =======================================================
-
-func _dessiner_surbrillance_deplacement() -> void:
-	for x in range(TAILLE_PLATEAU):
-		for y in range(TAILLE_PLATEAU):
-			if board.case_occupee(x, y):
+			# Si le type n'a pas changé, on ne touche à rien
+			if _types_affiches.get(cle, -1) == type_actuel:
 				continue
-			var type_case : int = board.get_case(x, y)
-			if type_case in [board.CaseType.VIDE, board.CaseType.MUR]:
-				continue
-			# Une case avec une mine ne peut pas être un déplacement
-			if event_manager != null and event_manager.get_mine_en(x, y) != {}:
-				continue
-			var cout_reel : int = 2 if type_case == board.CaseType.FORET else 1
-			if joueur_actif.pm_actuels >= cout_reel and joueur_actif.peut_se_deplacer_vers(x, y):
-				_dessiner_surbrillance_case(x, y, COULEUR_CASE_ACCESSIBLE)
 
-func _dessiner_surbrillance_attaque() -> void:
-	# Ennemis attaquables
-	for joueur in joueurs:
-		if joueur == joueur_actif or not joueur.est_place or joueur.est_mort:
-			continue
-		if joueur_actif.peut_attaquer(joueur.grid_x, joueur.grid_y):
-			_dessiner_surbrillance_case(joueur.grid_x, joueur.grid_y, COULEUR_CASE_ATTAQUABLE)
+			# Supprime l'ancien nœud s'il existe
+			if _noeuds_cases.has(cle):
+				_noeuds_cases[cle].queue_free()
+				_noeuds_cases.erase(cle)
 
-	# Mines attaquables — même logique que les ennemis
-	if event_manager != null:
-		for mine in event_manager.mines_actives:
-			if joueur_actif.peut_attaquer(mine["x"], mine["y"]):
-				_dessiner_surbrillance_case(mine["x"], mine["y"], COULEUR_CASE_ATTAQUABLE)
+			# Instancie le nouveau nœud selon le type
+			_placer_case(x, y, type_actuel, cle)
 
-
-func _dessiner_surbrillance_sort() -> void:
-	var sort       : Resource = joueur_actif.sorts[sort_selectionne]
-	var portee_eff : int      = sort.portee + joueur_actif.bonus_range_sorts
-
-	if sort.portee == 0:
-		return  # Portée illimitée — pas de surbrillance de zone
-
-	for x in range(TAILLE_PLATEAU):
-		for y in range(TAILLE_PLATEAU):
-			var distance : int = abs(x - joueur_actif.grid_x) + abs(y - joueur_actif.grid_y)
-			if distance <= portee_eff:
-				_dessiner_surbrillance_case(x, y, COULEUR_CASE_SORT)
+			# Mémorise le type affiché
+			_types_affiches[cle] = type_actuel
 
 
 # -------------------------------------------------------
-# Dessine un losange coloré sur la case (x, y)
+# Instancie le bon .glb pour la case (x, y) selon son type.
+# La case VIDE ne génère aucun nœud — elle est invisible.
+#
+# Le damier noir/blanc est déterminé par (x + y) % 2 :
+#   pair  → white
+#   impair → black
+# (uniquement pour les cases NORMAL)
 # -------------------------------------------------------
-func _dessiner_surbrillance_case(x: int, y: int, couleur: Color) -> void:
-	var centre : Vector2 = grid_to_screen(x, y)
-	var pts    : Array   = _get_losange_points(centre)
-	draw_colored_polygon(PackedVector2Array(pts), couleur)
+func _placer_case(x: int, y: int, type_case: int, cle: String) -> void:
+	# La case VIDE est un trou — rien à afficher
+	if type_case == 3:  # CaseType.VIDE
+		return
+
+	# Sélectionne la scène selon le type
+	var scene : PackedScene = _get_scene_case(x, y, type_case)
+	if scene == null:
+		push_warning("renderer._placer_case() — aucune scène pour le type %d" % type_case)
+		return
+
+	# Instancie et positionne le nœud 3D
+	var noeud : Node3D = scene.instantiate()
+	noeud.position = grid_to_world(x, y)
+	add_child(noeud)
+
+	# Stocke la référence pour mise à jour future
+	_noeuds_cases[cle] = noeud
 
 
-# =======================================================
-# DESSIN DES ÉVÉNEMENTS
-# =======================================================
-func _dessiner_evenements() -> void:
-	for mine in event_manager.mines_actives:
-		_dessiner_mine(grid_to_screen(mine["x"], mine["y"]), mine)
-
-	for tas in event_manager.tas_pieces_actifs:
-		draw_circle(grid_to_screen(tas["x"], tas["y"]), RAYON_PIECE, COULEUR_PIECE)
-
-	for coffre in event_manager.coffres_actifs:
-		draw_circle(grid_to_screen(coffre["x"], coffre["y"]), RAYON_COFFRE, COULEUR_COFFRE)
-
-
-func _dessiner_mine(centre: Vector2, mine: Dictionary) -> void:
-	# Corps de la mine — losange doré
-	var pts : Array = _get_losange_points(centre, RAYON_MINE)
-	draw_colored_polygon(PackedVector2Array(pts), COULEUR_MINE)
-
-	# Barre de vie proportionnelle aux HP restants
-	var pct_vie      : float   = float(mine["hp"]) / float(mine["hp_max"])
-	var largeur_vie  : float   = LARGEUR_BARRE_VIE * pct_vie
-	var origine      : Vector2 = centre + Vector2(-LARGEUR_BARRE_VIE / 2.0, RAYON_MINE + 2.0)
-
-	draw_rect(Rect2(origine, Vector2(LARGEUR_BARRE_VIE, HAUTEUR_BARRE_VIE)), Color(0.3, 0.3, 0.3))
-	draw_rect(Rect2(origine, Vector2(largeur_vie, HAUTEUR_BARRE_VIE)),        Color(0.1, 0.9, 0.1))
+# -------------------------------------------------------
+# Retourne la scène PackedScene correspondant à un CaseType.
+# Pour NORMAL, alterne blanc/noir selon la parité (x + y).
+# -------------------------------------------------------
+func _get_scene_case(x: int, y: int, type_case: int) -> PackedScene:
+	match type_case:
+		0:  # NORMAL — damier blanc/noir
+			return SCENE_CASE_NORMAL_WHITE if (x + y) % 2 == 0 else SCENE_CASE_NORMAL_BLACK
+		1:  return SCENE_CASE_LAVE
+		2:  return SCENE_CASE_EAU
+		# 3 = VIDE — géré dans _placer_case(), jamais atteint ici
+		4:  return SCENE_CASE_FORET
+		5:  return SCENE_CASE_MUR
+		6:  return SCENE_CASE_TOUR
+	return null
 
 
 # =======================================================
@@ -285,52 +260,350 @@ func _dessiner_mine(centre: Vector2, mine: Dictionary) -> void:
 # =======================================================
 
 # -------------------------------------------------------
-# Convertit une case (x, y) en position pixel sur l'écran.
-# Projection isométrique standard — l'axe X va vers le bas-droite,
-# l'axe Y va vers le bas-gauche.
-# -------------------------------------------------------
-func grid_to_screen(x: int, y: int) -> Vector2:
-	return _offset + Vector2(
-		(x - y) * (TILE_W / 2.0),
-		(x + y) * (TILE_H / 2.0)
-	)
-
-
-# -------------------------------------------------------
-# Convertit une position pixel en case (x, y).
-# Inverse de grid_to_screen — utilisé pour les clics souris.
+# Convertit une case (x, y) de la grille en position 3D.
 #
-# roundi() est obligatoire ici : int() tronque vers zéro,
-# ce qui décale la case détectée dès qu'on clique dans
-# la moitié inférieure d'une tuile.
+# Le plateau est centré sur l'origine grâce à OFFSET_PLATEAU.
+# L'axe X de la grille correspond à l'axe X de Godot.
+# L'axe Y de la grille correspond à l'axe Z de Godot
+#   (en 3D Godot, Y = hauteur — on joue sur un plan horizontal XZ).
 # -------------------------------------------------------
+func grid_to_world(x: int, y: int) -> Vector3:
+	return OFFSET_PLATEAU + Vector3(x * CASE_SIZE, 0.0, y * CASE_SIZE)
+
+
+# =======================================================
+# CONVERSION CLIC SOURIS → CASE DE GRILLE (Raycast 3D)
+# -------------------------------------------------------
+# Remplace l'ancienne version 2D (calcul mathématique sur
+# une projection isométrique pixel) par un vrai raycast 3D.
+#
+# Principe :
+#   1. On projette un rayon depuis la caméra à travers
+#      le pixel cliqué (camera.project_ray_origin/direction)
+#   2. Ce rayon intersecte un plan horizontal y=0 (le sol)
+#   3. Le point d'intersection donne une position 3D
+#   4. On inverse grid_to_world() pour obtenir (grid_x, grid_y)
+#   5. On vérifie que la case est dans les bornes du plateau
+#
+# Retourne Vector2i(-1, -1) si le clic est hors plateau.
+# =======================================================
 func screen_to_grid(pos: Vector2) -> Vector2i:
-	var local : Vector2 = pos - _offset
-	var gx    : int     = roundi((local.x / (TILE_W / 2.0) + local.y / (TILE_H / 2.0)) / 2.0)
-	var gy    : int     = roundi((local.y / (TILE_H / 2.0) - local.x / (TILE_W / 2.0)) / 2.0)
+	# Sécurité — si la caméra n'est pas encore injectée
+	if camera == null:
+		push_warning("renderer.screen_to_grid() — camera est null !")
+		return Vector2i(-1, -1)
+
+	# Étape 1 — Récupère l'origine et la direction du rayon
+	# project_ray_origin : point de départ du rayon (position caméra)
+	# project_ray_normal : direction normalisée vers le pixel cliqué
+	var origine   : Vector3 = camera.project_ray_origin(pos)
+	var direction : Vector3 = camera.project_ray_normal(pos)
+
+	# Étape 2 — Intersection rayon / plan horizontal y=0
+	# On cherche t tel que : origine.y + t * direction.y = 0
+	# → t = -origine.y / direction.y
+	# Si direction.y == 0, le rayon est parallèle au sol → pas d'intersection
+	if abs(direction.y) < 0.001:
+		return Vector2i(-1, -1)
+
+	var t         : float   = -origine.y / direction.y
+	var point_sol : Vector3 = origine + direction * t
+
+	# Étape 3 — Conversion position 3D → coordonnées de grille
+	# On inverse grid_to_world() :
+	#   grid_to_world(x, y) = OFFSET_PLATEAU + Vector3(x * CASE_SIZE, 0, y * CASE_SIZE)
+	# Donc : x = (point_sol.x - OFFSET_PLATEAU.x) / CASE_SIZE
+	var gx : int = roundi((point_sol.x - OFFSET_PLATEAU.x) / CASE_SIZE)
+	var gy : int = roundi((point_sol.z - OFFSET_PLATEAU.z) / CASE_SIZE)
+
+	# Étape 4 — Vérifie que la case est dans les bornes du plateau 8x8
+	if gx < 0 or gx >= TAILLE_PLATEAU or gy < 0 or gy >= TAILLE_PLATEAU:
+		return Vector2i(-1, -1)
+
 	return Vector2i(gx, gy)
 
 
+# =======================================================
+# JOUEURS — Affichage des pions 3D
+# =======================================================
+
 # -------------------------------------------------------
-# Dessine une case isométrique (losange rempli + contour noir)
+# Met à jour l'affichage de tous les joueurs.
+# - Crée le nœud pion si le joueur vient d'être placé
+# - Déplace le nœud si le joueur a bougé
+# - Supprime le nœud si le joueur est mort
+# Appelée depuis rafraichir().
 # -------------------------------------------------------
-func dessiner_case(x: int, y: int, couleur: Color) -> void:
-	var centre : Vector2 = grid_to_screen(x, y)
-	var pts    : Array   = _get_losange_points(centre)
-	draw_colored_polygon(PackedVector2Array(pts), couleur)
-	draw_polyline(PackedVector2Array(pts + [pts[0]]), Color.BLACK, 1.0)
+func _mettre_a_jour_joueurs() -> void:
+	for i in range(joueurs.size()):
+		var joueur : Node = joueurs[i]
+		var cle    : String = str(i)
+
+		# Cas 1 — Joueur mort ou non placé : on supprime son pion s'il existe
+		if joueur.est_mort or not joueur.est_place:
+			if _noeuds_joueurs.has(cle):
+				_noeuds_joueurs[cle].queue_free()
+				_noeuds_joueurs.erase(cle)
+			continue
+
+		# Cas 2 — Joueur vivant et placé
+		if not _noeuds_joueurs.has(cle):
+			# Premier affichage : on crée le pion complet (pion + accessoires)
+			var noeud_pion : Node3D = _creer_pion(joueur)
+			add_child(noeud_pion)
+			_noeuds_joueurs[cle] = noeud_pion
+
+		# Dans tous les cas, on synchronise la position 3D avec la grille
+		# Y = 0.1 pour poser le pion légèrement au-dessus de la case
+		var pos_monde : Vector3 = grid_to_world(joueur.grid_x, joueur.grid_y)
+		_noeuds_joueurs[cle].position = Vector3(pos_monde.x, 0.1, pos_monde.z)
 
 
 # -------------------------------------------------------
-# Retourne les 4 sommets d'un losange centré sur `centre`.
-# rayon_w > 0 : surcharge la demi-largeur (pour les mines)
+# Crée un Node3D parent contenant le pion + ses accessoires.
+#
+# Architecture :
+#   Node3D (racine_pion)
+#   ├── pion_blanc  ← corps du pion
+#   ├── hache       ← accessoire 1 (selon classe)
+#   └── bouclier    ← accessoire 2 (selon classe)
+#
+# Les accessoires sont positionnés relativement au pion
+# grâce à une position locale (pas mondiale).
 # -------------------------------------------------------
-func _get_losange_points(centre: Vector2, rayon_w: float = -1.0, rayon_h: float = -1.0) -> Array:
-	var rw : float = rayon_w if rayon_w > 0.0 else TILE_W / 2.0
-	var rh : float = rayon_h if rayon_h > 0.0 else TILE_H / 2.0
-	return [
-		centre + Vector2(  0, -rh),  # Haut
-		centre + Vector2( rw,   0),  # Droite
-		centre + Vector2(  0,  rh),  # Bas
-		centre + Vector2(-rw,   0),  # Gauche
-	]
+func _creer_pion(joueur: Node) -> Node3D:
+	# Nœud racine qui regroupe pion + accessoires
+	var racine : Node3D = Node3D.new()
+
+	# Corps du pion (identique pour toutes les classes)
+	var corps : Node3D = SCENE_PION_BLANC.instantiate()
+	racine.add_child(corps)
+
+	# Détecte la classe via le chemin du script (même logique que input_handler)
+	var chemin : String = joueur.get_script().resource_path.to_lower()
+
+	if "guerrier" in chemin:
+		_ajouter_accessoire(racine, SCENE_HACHE,      Vector3( 0.3, 0.5, 0.0))
+		_ajouter_accessoire(racine, SCENE_BOUCLIER,   Vector3(-0.3, 0.4, 0.0))
+	elif "mage" in chemin:
+		_ajouter_accessoire(racine, SCENE_GRIMOIRE,   Vector3( 0.3, 0.4, 0.0))
+		_ajouter_accessoire(racine, SCENE_CHAPEAU_MAGE, Vector3(0.0, 1.2, 0.0))
+	elif "archer" in chemin:
+		_ajouter_accessoire(racine, SCENE_ARC,        Vector3( 0.3, 0.6, 0.0))
+		_ajouter_accessoire(racine, SCENE_CARQUOIS,   Vector3(-0.3, 0.5, 0.0))
+	elif "fripon" in chemin:
+		_ajouter_accessoire(racine, SCENE_KUNAI,      Vector3( 0.25, 0.3, 0.0))
+
+	return racine
+
+
+# -------------------------------------------------------
+# Instancie un accessoire et le positionne relativement
+# au nœud parent (le pion racine).
+# La position est locale : (0.3, 0.5, 0) = 30cm à droite
+# et 50cm en hauteur par rapport au centre du pion.
+# -------------------------------------------------------
+func _ajouter_accessoire(parent: Node3D, scene: PackedScene, position_locale: Vector3) -> void:
+	var accessoire : Node3D = scene.instantiate()
+	accessoire.position = position_locale
+	parent.add_child(accessoire)
+
+
+# =======================================================
+# SURBRILLANCES — Plans transparents au-dessus des cases
+# =======================================================
+
+# -------------------------------------------------------
+# Supprime toutes les surbrillances existantes et recrée
+# celles qui correspondent à l'état de sélection actuel.
+#
+# Appelée depuis rafraichir() après _mettre_a_jour_cases().
+# Si aucun joueur n'est sélectionné, on supprime tout et on sort.
+# -------------------------------------------------------
+func _mettre_a_jour_surbrillances() -> void:
+	# Supprime toutes les surbrillances de l'appel précédent
+	for noeud in _noeuds_surbrillances:
+		noeud.queue_free()
+	_noeuds_surbrillances.clear()
+
+	# Rien à afficher si pas de joueur sélectionné
+	if not joueur_selectionne or joueur_actif == null:
+		return
+
+	# Surbrillances de déplacement (jaune) et d'attaque (rouge)
+	_afficher_surbrillance_deplacement()
+	_afficher_surbrillance_attaque()
+
+	# Surbrillance de sort (violet) — seulement si un sort est sélectionné
+	if sort_selectionne >= 0 and sort_selectionne < joueur_actif.sorts.size():
+		_afficher_surbrillance_sort()
+
+
+# -------------------------------------------------------
+# Surbrillance jaune — cases accessibles en déplacement.
+# Reproduit la logique de l'ancienne _dessiner_surbrillance_deplacement().
+# -------------------------------------------------------
+func _afficher_surbrillance_deplacement() -> void:
+	var pm : int = joueur_actif.pm_actuels
+	var jx : int = joueur_actif.grid_x
+	var jy : int = joueur_actif.grid_y
+
+	for x in range(8):
+		for y in range(8):
+			# Distance de Manhattan entre le joueur et la case
+			var dist : int = abs(x - jx) + abs(y - jy)
+
+			# Coût réel : 2 PM pour entrer en forêt, 1 PM sinon
+			var cout : int = 2 if board.get_case(x, y) == 4 else 1  # 4 = FORET
+
+			# Case accessible si :
+			# - Dans la portée des PM
+			# - Non occupée par un autre joueur
+			# - Non bloquée (pas VIDE=3, pas MUR=5)
+			# - Pas la case du joueur lui-même
+			if dist == 0:
+				continue
+			if dist > pm:
+				continue
+			var type_case : int = board.get_case(x, y)
+			if type_case == 3 or type_case == 5:  # VIDE ou MUR
+				continue
+			if board.case_occupee(x, y):
+				continue
+			if cout > pm:
+				continue
+
+			_creer_surbrillance(x, y, Color(1.0, 1.0, 0.3, 0.45))  # Jaune
+
+
+# -------------------------------------------------------
+# Surbrillance rouge — ennemis à portée d'attaque de base.
+# -------------------------------------------------------
+func _afficher_surbrillance_attaque() -> void:
+	if joueur_actif.a_attaque_ce_tour:
+		return
+
+	var portee : int = joueur_actif.attaque_portee
+	var jx     : int = joueur_actif.grid_x
+	var jy     : int = joueur_actif.grid_y
+
+	for ennemi in joueurs:
+		if ennemi == joueur_actif:
+			continue
+		if not ennemi.est_place or ennemi.est_mort:
+			continue
+		var dist : int = abs(ennemi.grid_x - jx) + abs(ennemi.grid_y - jy)
+		if dist <= portee:
+			_creer_surbrillance(ennemi.grid_x, ennemi.grid_y, Color(1.0, 0.2, 0.2, 0.45))  # Rouge
+
+
+# -------------------------------------------------------
+# Surbrillance violette — portée du sort actuellement sélectionné.
+# -------------------------------------------------------
+func _afficher_surbrillance_sort() -> void:
+	var sort   : Resource = joueur_actif.sorts[sort_selectionne]
+	var portee : int      = sort.portee
+	var jx     : int      = joueur_actif.grid_x
+	var jy     : int      = joueur_actif.grid_y
+
+	# Portée 0 = portée illimitée (Tempête Arcanique) → tout le plateau
+	for x in range(8):
+		for y in range(8):
+			if x == jx and y == jy:
+				continue
+			var dist : int = abs(x - jx) + abs(y - jy)
+			if portee == 0 or dist <= portee:
+				_creer_surbrillance(x, y, Color(0.7, 0.2, 1.0, 0.45))  # Violet
+
+
+# -------------------------------------------------------
+# Crée un plan plat transparent (MeshInstance3D) sur la case (x, y).
+#
+# PlaneMesh est un plan horizontal dans Godot (axes X et Z).
+# On le place à HAUTEUR_SURBRILLANCE pour qu'il flotte
+# légèrement au-dessus de la surface des cases .glb.
+#
+# Le matériau est en TRANSPARENCY_ALPHA pour afficher
+# la transparence correctement sans artefacts.
+# -------------------------------------------------------
+func _creer_surbrillance(x: int, y: int, couleur: Color) -> void:
+	var mesh_instance := MeshInstance3D.new()
+
+	# Crée un plan plat aux dimensions de la surbrillance
+	var plan := PlaneMesh.new()
+	plan.size = Vector2(TAILLE_SURBRILLANCE, TAILLE_SURBRILLANCE)
+	mesh_instance.mesh = plan
+
+	# Matériau transparent avec la couleur voulue
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color            = couleur
+	mat.transparency            = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.shading_mode            = BaseMaterial3D.SHADING_MODE_UNSHADED
+	mesh_instance.material_override = mat
+
+	# Position : centre de la case + légèrement en hauteur
+	var pos : Vector3 = grid_to_world(x, y)
+	mesh_instance.position = Vector3(pos.x, HAUTEUR_SURBRILLANCE, pos.z)
+
+	add_child(mesh_instance)
+	_noeuds_surbrillances.append(mesh_instance)
+
+
+# =======================================================
+# ÉVÉNEMENTS — Mines, coffres, tas de pièces
+# =======================================================
+
+# -------------------------------------------------------
+# Supprime tous les nœuds d'événements existants et
+# recrée ceux qui sont actuellement actifs dans event_manager.
+# Même stratégie que les surbrillances : on reconstruit tout
+# à chaque rafraichir() car les événements changent peu souvent.
+# -------------------------------------------------------
+func _mettre_a_jour_evenements() -> void:
+	if event_manager == null:
+		return
+
+	# Supprime tous les nœuds existants
+	for noeud in _noeuds_evenements.values():
+		noeud.queue_free()
+	_noeuds_evenements.clear()
+
+	# Mines actives — charriot.glb posé sur la case
+	for mine in event_manager.mines_actives:
+		_placer_evenement(
+			mine["x"], mine["y"],
+			SCENE_MINE,
+			"mine_%d_%d" % [mine["x"], mine["y"]],
+			0.1  # Légèrement au-dessus de la case
+		)
+
+	# Tas de pièces — après destruction d'une mine
+	for tas in event_manager.tas_pieces_actifs:
+		_placer_evenement(
+			tas["x"], tas["y"],
+			SCENE_TAS_PIECES,
+			"tas_%d_%d" % [tas["x"], tas["y"]],
+			0.1
+		)
+
+	# Coffres au trésor
+	for coffre in event_manager.coffres_actifs:
+		_placer_evenement(
+			coffre["x"], coffre["y"],
+			SCENE_COFFRE,
+			"coffre_%d_%d" % [coffre["x"], coffre["y"]],
+			0.1
+		)
+
+
+# -------------------------------------------------------
+# Instancie un .glb d'événement et le positionne sur la case (x, y).
+# hauteur_y : décalage vertical pour poser l'objet sur la case
+#             sans le faire traverser (0.1 = 10cm au-dessus)
+# -------------------------------------------------------
+func _placer_evenement(x: int, y: int, scene: PackedScene, cle: String, hauteur_y: float) -> void:
+	var noeud : Node3D = scene.instantiate()
+	var pos   : Vector3 = grid_to_world(x, y)
+	noeud.position = Vector3(pos.x, hauteur_y, pos.z)
+	add_child(noeud)
+	_noeuds_evenements[cle] = noeud

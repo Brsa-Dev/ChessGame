@@ -111,6 +111,12 @@ var achats_par_item  : Dictionary = {}  # { "elixir_gold": 1 } — suivi des lim
 var sorts           : Array = []
 var sort_selectionne: int   = -1  # Index du sort actif (-1 = aucun)
 
+# Nombre de sorts actuellement débloqués pour ce joueur.
+# Commence à 1 (sort 1 uniquement).
+# Mis à jour par main.gd à chaque tour_global_termine.
+# Règle : +1 sort tous les 2 tours globaux — sort 4 débloqué au tour 7.
+var sorts_debloques : int = 1
+
 
 # =======================================================
 # EFFETS DE STATUT

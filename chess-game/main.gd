@@ -30,6 +30,8 @@ extends Node2D
 @onready var inventory_ui    : Node = $InventoryUI
 @onready var game_over_ui    : Node = $GameOverUi
 @onready var bouton_fin_tour : Node = $UI/BoutonFinTour
+@onready var camera          : Camera3D = $Camera3D
+@onready var sort_ui         : Node     = $SortUI
 
 # -------------------------------------------------------
 # Références aux handlers (nœuds enfants dans main.tscn)
@@ -68,6 +70,15 @@ func _ready() -> void:
 
 	hud_ui.rafraichir(_joueurs, tour_manager.get_joueur_actif())
 	renderer.queue_redraw()
+	if sort_ui != null:
+		sort_ui.rafraichir()
+
+	# Positionne et oriente la caméra vers le centre du plateau 3D
+	# Le plateau 8x8 centré sur l'origine → on pointe vers (0, 0, 0)
+	# qui est le centre réel du plateau (OFFSET_PLATEAU = -3.5 annule l'offset)
+	$Camera3D.position = Vector3(10.0, 10.0, 10.0)
+	$Camera3D.look_at(Vector3(0.0, 0.0, 0.0), Vector3.UP)
+
 	print("✅ Main prêt !")
 
 
@@ -96,6 +107,9 @@ func _initialiser_systemes() -> void:
 # Chaque handler reçoit uniquement ce dont il a besoin.
 # -------------------------------------------------------
 func _injecter_references_handlers() -> void:
+	
+	renderer.camera = camera
+	
 	# --- Effects Handler ---
 	effects_handler.board    = board
 	effects_handler.renderer = renderer
@@ -132,6 +146,12 @@ func _injecter_references_handlers() -> void:
 	input_handler.on_log            = _log
 	input_handler.on_rafraichir_hud = _rafraichir_hud
 
+	# --- Sort UI ---
+	if sort_ui != null:
+		sort_ui.joueur_actif  = tour_manager.get_joueur_actif()
+		sort_ui.input_handler = input_handler
+		sort_ui.renderer      = renderer
+
 
 # -------------------------------------------------------
 # Connecte tous les signaux du jeu
@@ -142,6 +162,7 @@ func _connecter_signaux() -> void:
 	for joueur in _joueurs:
 		joueur.mort.connect(_on_joueur_mort.bind(joueur))
 
+	tour_manager.tour_change.connect(_on_tour_change)
 	tour_manager.phase_boutique.connect(_on_phase_boutique)
 	tour_manager.tour_global_termine.connect(_on_tour_global_termine)
 
@@ -164,10 +185,7 @@ func _connecter_signaux() -> void:
 # -------------------------------------------------------
 func _positionner_bouton_fin_tour() -> void:
 	var taille_ecran : Vector2 = get_viewport().get_visible_rect().size
-	bouton_fin_tour.set_position(Vector2(
-		(taille_ecran.x / 2.0) - 55.0,
-		taille_ecran.y - 45.0
-	))
+	bouton_fin_tour.set_position(Vector2((taille_ecran.x / 2.0) - 55.0,taille_ecran.y - 45.0))
 
 
 # =======================================================
@@ -265,6 +283,7 @@ func _on_tour_global_termine(numero_tour: int) -> void:
 		laves_temporaires.erase(lave)
 
 	renderer.queue_redraw()
+	_mettre_a_jour_sorts_debloques()
 
 
 func _on_phase_boutique(_numero_tour: int) -> void:
@@ -394,6 +413,45 @@ func _rafraichir_hud() -> void:
 # =======================================================
 # HELPERS
 # =======================================================
+
+# -------------------------------------------------------
+# Callback du signal tour_change — émis par tour_manager
+# à chaque changement de joueur actif (y compris au démarrage).
+# Met à jour la SortUI avec le nouveau joueur actif.
+# -------------------------------------------------------
+func _on_tour_change(joueur: Node) -> void:
+	if sort_ui != null:
+		sort_ui.joueur_actif = joueur
+		sort_ui.rafraichir()
+
+
+# -------------------------------------------------------
+# Calcule et met à jour le nombre de sorts débloqués
+# pour tous les joueurs selon le tour global actuel.
+#
+# Règle du Game Design :
+#   Tour 1-2 → 1 sort   (sorts_debloques = 1)
+#   Tour 3-4 → 2 sorts  (sorts_debloques = 2)
+#   Tour 5-6 → 3 sorts  (sorts_debloques = 3)
+#   Tour 7+  → 4 sorts  (sorts_debloques = 4)
+#
+# Formule : min(4, 1 + (tour_global - 1) / 2)
+# avec division entière — donne exactement la progression voulue.
+# -------------------------------------------------------
+func _mettre_a_jour_sorts_debloques() -> void:
+	var tour : int = tour_manager.tour_global
+	var nb   : int = min(4, 1 + (tour - 1) / 2)
+
+	for joueur in _joueurs:
+		# Ne met à jour que si ça change (évite un rafraichissement inutile de l'UI)
+		if joueur.sorts_debloques != nb:
+			joueur.sorts_debloques = nb
+			print("🔓 %s — %d sort(s) débloqué(s) (tour global %d)" % [joueur.name, nb, tour])
+
+	# Demande à la SortUI de se rafraichir si elle existe
+	if sort_ui != null:
+		sort_ui.rafraichir()
+
 
 func _get_joueur_en(x: int, y: int) -> Node:
 	for joueur in _joueurs:

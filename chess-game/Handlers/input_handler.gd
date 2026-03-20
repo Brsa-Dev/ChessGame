@@ -122,6 +122,15 @@ func _traiter_input_clavier(event: InputEventKey) -> void:
 	if index_sort < 0 or index_sort >= joueur_actif.sorts.size():
 		return
 
+	# Vérifie que le sort est bien débloqué ce tour
+	# sorts_debloques = 1 au tour 1, puis +1 tous les 2 tours globaux
+	if index_sort >= joueur_actif.sorts_debloques:
+		on_log.call("🔒 Sort %d verrouillé — débloqué au tour %d" % [
+			index_sort + 1,
+			1 + (index_sort * 2)  # Tour de déblocage : sort2=tour3, sort3=tour5, sort4=tour7
+		], joueur_actif)
+	return
+
 	var sort : Resource = joueur_actif.sorts[index_sort]
 
 	# Cas spécial — Dérobade avec une marque déjà posée :
