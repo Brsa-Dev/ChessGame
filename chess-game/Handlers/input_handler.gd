@@ -43,7 +43,6 @@ const DEGATS_BOMBE  : int = 20  # Dégâts infligés par la bombe dans sa zone
 var board           : Node = null  # board.gd
 var renderer        : Node = null  # renderer.gd
 var tour_manager    : Node = null  # tour_manager.gd
-var log_ui          : Node = null  # log_ui.gd
 var hud_ui          : Node = null  # hud_ui.gd
 var event_manager   : Node = null  # event_manager.gd
 var inventory_ui    : Node = null  # inventory_ui.gd
@@ -72,9 +71,8 @@ var cape_en_attente  : Resource = null  # Cape de Forêt en attente d'une case c
 
 # -------------------------------------------------------
 # Callbacks — définis par main.gd pour déléguer
-# les actions post-input (log, rafraîchissement HUD)
+# les actions post-input (rafraîchissement HUD)
 # -------------------------------------------------------
-var on_log            : Callable  # func(message, joueur)
 var on_rafraichir_hud : Callable  # func()
 
 
@@ -125,10 +123,6 @@ func _traiter_input_clavier(event: InputEventKey) -> void:
 	# Vérifie que le sort est bien débloqué ce tour
 	# sorts_debloques = 1 au tour 1, puis +1 tous les 2 tours globaux
 	if index_sort >= joueur_actif.sorts_debloques:
-		on_log.call("🔒 Sort %d verrouillé — débloqué au tour %d" % [
-			index_sort + 1,
-			1 + (index_sort * 2)  # Tour de déblocage : sort2=tour3, sort3=tour5, sort4=tour7
-		], joueur_actif)
 		return
 
 	var sort : Resource = joueur_actif.sorts[index_sort]
@@ -224,7 +218,6 @@ func _placer_joueur(joueur_actif: Node, cell: Vector2i) -> void:
 		
 	board.occuper_case(cell.x, cell.y)
 	joueur_actif.placer(cell.x, cell.y)
-	on_log.call("📍 %s placé en (%d,%d)" % [joueur_actif.name, cell.x, cell.y], joueur_actif)
 	on_rafraichir_hud.call()
 	renderer.queue_redraw()
 
@@ -291,7 +284,6 @@ func _traiter_deplacement_ou_attaque(joueur_actif: Node, cell: Vector2i) -> void
 		joueur_actif.a_attaque_ce_tour = true
 		event_manager.attaquer_mine(cell.x, cell.y, joueur_actif.attaque_degats, joueur_actif)
 		joueur_actif.gagner_gold_sur_degats(joueur_actif.attaque_degats)
-		on_log.call("⚔️ %s attaque une Mine — %d dmg" % [joueur_actif.name, joueur_actif.attaque_degats], joueur_actif)
 		joueur_selectionne = false
 		on_rafraichir_hud.call()
 	elif joueur_actif.peut_se_deplacer_vers(cell.x, cell.y):
@@ -325,15 +317,12 @@ func _attaquer(attaquant: Node, cible: Node) -> void:
 		cible.ajouter_dot("fleches_empoisonnees", 5, 3)
 		attaquant.fleches_empoisonnees_actif = false
 		_retirer_item(attaquant, "fleches_empoisonnees")
-		on_log.call("🏹 Flèches Empoisonnées ! DoT sur %s" % cible.name, attaquant)
-	
+
 	# Synergie Ceinture de Pickpocket — vole 1 Gold à chaque attaque
 	if attaquant.pickpocket_actif and cible.gold > 0:
 		cible.gold     -= 1
 		attaquant.gold += 1
-		on_log.call("👜 %s vole 1 Gold à %s !" % [attaquant.name, cible.name], attaquant)
 
-	on_log.call("⚔️ %s attaque %s — %d dmg" % [attaquant.name, cible.name, attaquant.attaque_degats], attaquant)
 	joueur_selectionne = false
 	on_rafraichir_hud.call()
 
@@ -385,7 +374,6 @@ func _deplacer(joueur_actif: Node, cell: Vector2i) -> void:
 
 	board.occuper_case(joueur_actif.grid_x, joueur_actif.grid_y)
 	joueur_selectionne = false
-	on_log.call("🚶 %s → (%d,%d) — PM : %d" % [joueur_actif.name, cell.x, cell.y, joueur_actif.pm_actuels], joueur_actif)
 	on_rafraichir_hud.call()
 
 
@@ -409,7 +397,6 @@ func _appliquer_bombe(cell: Vector2i, joueur_actif: Node) -> void:
 		var distance : int = abs(j.grid_x - cell.x) + abs(j.grid_y - cell.y)
 		if distance <= RAYON_BOMBE:
 			j.recevoir_degats(DEGATS_BOMBE)
-			on_log.call("💣 Explosion ! %d dmg sur %s" % [DEGATS_BOMBE, j.name], joueur_actif)
 
 	_retirer_item(joueur_actif, bombe_en_attente.id)
 	bombe_en_attente = null
@@ -424,7 +411,6 @@ func appliquer_potion(item: Resource) -> void:
 	var joueur_actif : Node = tour_manager.get_joueur_actif()
 	joueur_actif.hp_actuels = min(joueur_actif.hp_actuels + 30, joueur_actif.hp_max)
 	_retirer_item(joueur_actif, item.id)
-	on_log.call("💊 %s utilise une Potion de Soin ! +30 HP" % joueur_actif.name, joueur_actif)
 	on_rafraichir_hud.call()
 	
 # -------------------------------------------------------
@@ -459,7 +445,6 @@ func _appliquer_cape_foret(cell: Vector2i, joueur_actif: Node) -> void:
 		_retirer_item(joueur_actif, cape_en_attente.id)
 
 	cape_en_attente = null
-	on_log.call("🌲 %s crée une Forêt en (%d,%d)" % [joueur_actif.name, cell.x, cell.y], joueur_actif)
 	on_rafraichir_hud.call()
 	renderer.queue_redraw()
 
@@ -479,7 +464,6 @@ func appliquer_bandage(item: Resource) -> void:
 	for source_id in dots_expires:
 		joueur_actif.dots_actifs.erase(source_id)
 	_retirer_item(joueur_actif, item.id)
-	on_log.call("🩹 %s utilise un Bandage — DoT réduits de 1 tour" % joueur_actif.name, joueur_actif)
 	on_rafraichir_hud.call()
 
 # -------------------------------------------------------
@@ -493,8 +477,6 @@ func appliquer_bandage(item: Resource) -> void:
 func appliquer_fleches_empoisonnees(item: Resource) -> void:
 	var joueur_actif : Node = tour_manager.get_joueur_actif()
 	joueur_actif.fleches_empoisonnees_actif = true
-	# Les flèches ne sont pas retirées à l'activation — elles le sont après l'attaque
-	on_log.call("🏹 %s active les Flèches Empoisonnées !" % joueur_actif.name, joueur_actif)
 	on_rafraichir_hud.call()
 
 # -------------------------------------------------------

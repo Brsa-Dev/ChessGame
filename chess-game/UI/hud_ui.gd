@@ -1,13 +1,12 @@
 # =======================================================
 # UI/hud_ui.gd
 # -------------------------------------------------------
-# HUD — Panneau d'informations détaillées ancré à droite.
+# HUD joueurs — colonne à droite de l'écran.
 # Construit entièrement en code (pas de .tscn).
 #
-#   - 1 bloc par joueur avec HP, PM, Gold, case, sorts, effets
-#   - Barres de progression textuelles
-#   - Couleurs BBCode par joueur et par état (Rage, Frénésie, etc.)
-#   - Mis à jour via rafraichir() après chaque action
+#   - 1 card par joueur : HP/PM (ProgressBar), Gold, effets
+#   - Card du joueur actif mise en surbrillance
+#   - Mis à jour via rafraichir(joueurs, joueur_actif)
 #
 # NE contient PAS de logique de gameplay.
 # =======================================================
@@ -18,203 +17,200 @@ extends CanvasLayer
 # CONSTANTES — Layout
 # =======================================================
 
-const HUD_LARGEUR       : int = 305  # Largeur du panneau en pixels
-const BARRE_LONGUEUR_HP : int = 14   # Nombre de caractères pour la barre de vie
-const BARRE_LONGUEUR_PM : int = 10   # Nombre de caractères pour la barre de PM
+const HUD_LARGEUR      : int = 220
+const HUD_MARGE_DROITE : int = 8
+const HUD_MARGE_HAUT   : int = 8
+const HUD_ESPACEMENT   : int = 6
+const FONT_SIZE_NOM    : int = 13
+const FONT_SIZE_STATS  : int = 11
 
 
 # =======================================================
-# CONSTANTES — Couleurs des joueurs (BBCode)
-# Alignées avec renderer.gd (COULEURS_JOUEURS)
+# CONSTANTES — Couleurs
 # =======================================================
 
-const COULEUR_J1 : String = "#ffff00"  # Jaune
-const COULEUR_J2 : String = "#00ffff"  # Cyan
-const COULEUR_J3 : String = "#00ff00"  # Vert
-
-const COULEURS_JOUEURS : Array = [COULEUR_J1, COULEUR_J2, COULEUR_J3]
-
-
-# =======================================================
-# CONSTANTES — Touches des sorts (dans l'ordre)
-# =======================================================
-
-const TOUCHES_SORTS : Array = ["A", "Z", "E", "R"]
+const COULEUR_FOND          : Color = Color(0.07, 0.07, 0.15, 0.92)
+const COULEUR_FOND_ACTIF    : Color = Color(0.12, 0.12, 0.28, 0.97)
+const COULEUR_FOND_MORT     : Color = Color(0.07, 0.07, 0.07, 0.80)
+const COULEUR_BORDURE       : Color = Color(0.25, 0.25, 0.45, 1.0)
+const COULEUR_BORDURE_ACTIF : Color = Color(0.6,  0.6,  1.0,  1.0)
+const COULEUR_HP_HAUT       : Color = Color(0.18, 0.75, 0.35)
+const COULEUR_HP_MOYEN      : Color = Color(0.85, 0.65, 0.10)
+const COULEUR_HP_BAS        : Color = Color(0.85, 0.20, 0.20)
+const COULEUR_PM            : Color = Color(0.20, 0.55, 0.95)
+const COULEUR_GOLD          : Color = Color(0.95, 0.80, 0.10)
+const COULEUR_TEXTE         : Color = Color(0.85, 0.85, 0.85)
+const COULEUR_MORT          : Color = Color(0.35, 0.35, 0.35)
+const COULEUR_J1            : Color = Color(1.0,  1.0,  0.0)
+const COULEUR_J2            : Color = Color(0.0,  1.0,  1.0)
+const COULEUR_J3            : Color = Color(0.0,  1.0,  0.0)
+const COULEURS_JOUEURS      : Array = [COULEUR_J1, COULEUR_J2, COULEUR_J3]
 
 
 # =======================================================
 # RÉFÉRENCES — Injectées par main.gd
 # =======================================================
 
-var board : Node = null  # Nécessaire pour lire le type de la case actuelle
-
 var tour_manager : Node = null
 
-var _label_timer : Label = null
 
 # =======================================================
 # NŒUDS — Construits dans _ready()
 # =======================================================
 
-var _panel  : PanelContainer = null
-var _labels : Array          = []   # Un RichTextLabel par joueur
+var _conteneur : VBoxContainer = null
 
 
 # =======================================================
 # INITIALISATION
 # =======================================================
+
 func _ready() -> void:
-	_construire_panel()
+	layer = 8
 
-
-# -------------------------------------------------------
-# Construit le panneau principal et les blocs joueurs.
-# -------------------------------------------------------
-func _construire_panel() -> void:
-	
-	_panel = PanelContainer.new()
-	_panel.anchor_left   = 1.0
-	_panel.anchor_right  = 1.0
-	_panel.anchor_top    = 0.0
-	_panel.anchor_bottom = 1.0
-	_panel.offset_left   = -HUD_LARGEUR
-	_panel.offset_right  = 0
-	_panel.offset_top    = 0
-	_panel.offset_bottom = 0
-	add_child(_panel)
-
-	var scroll : ScrollContainer = ScrollContainer.new()
-	scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_panel.add_child(scroll)
-
-	var vbox : VBoxContainer = VBoxContainer.new()
-	vbox.custom_minimum_size      = Vector2(HUD_LARGEUR - 10, 0)
-	vbox.size_flags_horizontal    = Control.SIZE_EXPAND_FILL
-	scroll.add_child(vbox)
-	
-	_label_timer = Label.new()
-	_label_timer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_label_timer.add_theme_color_override("font_color", Color.WHITE)
-	vbox.add_child(_label_timer)
-
-	var titre : Label = Label.new()
-	titre.text                 = "📊 Informations"
-	titre.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	titre.add_theme_color_override("font_color", Color.WHITE)
-	vbox.add_child(titre)
-
-	# Un RichTextLabel par joueur
-	for _i in range(3):
-		vbox.add_child(HSeparator.new())
-		var rtl : RichTextLabel = RichTextLabel.new()
-		rtl.bbcode_enabled            = true
-		rtl.fit_content               = true
-		rtl.custom_minimum_size       = Vector2(HUD_LARGEUR - 15, 10)
-		rtl.size_flags_horizontal     = Control.SIZE_EXPAND_FILL
-		vbox.add_child(rtl)
-		_labels.append(rtl)
+	_conteneur = VBoxContainer.new()
+	_conteneur.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_conteneur.anchor_left     = 1.0
+	_conteneur.anchor_right    = 1.0
+	_conteneur.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	_conteneur.offset_right    = -HUD_MARGE_DROITE
+	_conteneur.offset_top      = HUD_MARGE_HAUT
+	_conteneur.add_theme_constant_override("separation", HUD_ESPACEMENT)
+	add_child(_conteneur)
 
 
 # =======================================================
 # API PUBLIQUE
 # =======================================================
 
-# -------------------------------------------------------
-# Rafraîchit l'affichage de tous les joueurs.
-# Appelée par main.gd via _rafraichir_hud() après chaque action.
-# -------------------------------------------------------
 func rafraichir(joueurs: Array, joueur_actif: Node) -> void:
+	for enfant in _conteneur.get_children():
+		enfant.queue_free()
+
 	for i in range(joueurs.size()):
-		if i >= _labels.size():
-			break
-		_labels[i].text = _construire_texte(joueurs[i], joueur_actif, i, joueurs)
+		var card := _creer_card(joueurs[i], i, joueur_actif)
+		_conteneur.add_child(card)
 
 
 # =======================================================
-# CONSTRUCTION DU TEXTE BBCode
+# CONSTRUCTION D'UNE CARD JOUEUR
 # =======================================================
 
-# -------------------------------------------------------
-# Génère le texte BBCode complet pour un joueur.
-# -------------------------------------------------------
-func _construire_texte(joueur: Node, joueur_actif: Node, index: int, tous: Array) -> String:
-	if joueur.est_mort:
-		return "[color=#888888]💀 %s — ÉLIMINÉ[/color]" % joueur.name
+func _creer_card(joueur: Node, index: int, joueur_actif: Node) -> PanelContainer:
+	var card      := PanelContainer.new()
+	var est_actif : bool = joueur == joueur_actif
+	var est_mort  : bool = joueur.est_mort
 
-	var c   : String = COULEURS_JOUEURS[index]
-	var txt : String = ""
+	var style := StyleBoxFlat.new()
+	style.bg_color     = COULEUR_FOND_MORT if est_mort else (COULEUR_FOND_ACTIF if est_actif else COULEUR_FOND)
+	style.border_color = COULEUR_BORDURE_ACTIF if est_actif else COULEUR_BORDURE
+	style.set_border_width_all(2 if est_actif else 1)
+	style.set_corner_radius_all(6)
+	style.content_margin_left   = 8.0
+	style.content_margin_right  = 8.0
+	style.content_margin_top    = 6.0
+	style.content_margin_bottom = 6.0
+	card.add_theme_stylebox_override("panel", style)
+	card.custom_minimum_size = Vector2(HUD_LARGEUR, 0)
 
-	# --- Nom + Classe + indicateur de tour ---
-	var actif_str : String = "  [color=#ffffff]◄ TON TOUR[/color]" if joueur == joueur_actif else ""
-	txt += "[color=%s][b]%s  [%s][/b]%s\n" % [c, joueur.name, _get_nom_classe(joueur), actif_str]
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 3)
+	card.add_child(vbox)
 
-	# --- Barre de vie (couleur selon pourcentage) ---
-	var pct_hp  : float  = float(joueur.hp_actuels) / float(joueur.hp_max)
-	var c_hp    : String = "#ff4444" if pct_hp < 0.3 else ("#ffff44" if pct_hp < 0.6 else "#44ff44")
-	txt += "[color=%s]❤️  %d/%d  %s[/color]\n" % [c_hp, joueur.hp_actuels, joueur.hp_max, _barre(pct_hp, BARRE_LONGUEUR_HP)]
+	var couleur_j : Color = COULEURS_JOUEURS[index] if index < COULEURS_JOUEURS.size() else COULEUR_TEXTE
 
-	# --- Barre de PM ---
-	var pct_pm : float = float(joueur.pm_actuels) / float(joueur.pm_max) if joueur.pm_max > 0 else 0.0
-	txt += "[color=#4488ff]🔵 PM: %d/%d  %s[/color]\n" % [joueur.pm_actuels, joueur.pm_max, _barre(pct_pm, BARRE_LONGUEUR_PM)]
+	# Joueur éliminé — card simplifiée
+	if est_mort:
+		var label := Label.new()
+		label.text = "💀 %s — ÉLIMINÉ" % joueur.name
+		label.add_theme_font_size_override("font_size", FONT_SIZE_NOM)
+		label.add_theme_color_override("font_color", COULEUR_MORT)
+		vbox.add_child(label)
+		return card
 
-	# --- Gold ---
-	txt += "[color=#ffcc00]💰 Gold: %d[/color]\n" % joueur.gold
+	# Nom + classe
+	var label_nom := Label.new()
+	label_nom.text = "%s  [%s]" % [joueur.name, _get_classe(joueur)]
+	label_nom.add_theme_font_size_override("font_size", FONT_SIZE_NOM)
+	label_nom.add_theme_color_override("font_color", couleur_j)
+	vbox.add_child(label_nom)
 
-	# --- Case actuelle ---
-	if joueur.est_place:
-		txt += "🗺️ Case (%d,%d)  %s\n" % [joueur.grid_x, joueur.grid_y, _get_texte_case(joueur)]
+	if est_actif:
+		var label_actif := Label.new()
+		label_actif.text = "◄ TON TOUR"
+		label_actif.add_theme_font_size_override("font_size", 10)
+		label_actif.add_theme_color_override("font_color", Color.WHITE)
+		vbox.add_child(label_actif)
 
-	# --- Effets de statut ---
-	var effets : String = _get_effets_actifs(joueur, tous)
-	if effets != "":
-		txt += effets + "\n"
+	# HP
+	var pct_hp : float = float(joueur.hp_actuels) / float(joueur.hp_max) if joueur.hp_max > 0 else 0.0
+	_ajouter_stat(vbox, "❤️ %d / %d" % [joueur.hp_actuels, joueur.hp_max],
+		joueur.hp_actuels, joueur.hp_max, _couleur_hp(pct_hp))
 
-	# --- Sorts avec cooldown ---
-	txt += "[color=#cc88ff]🔮 Sorts:[/color]\n"
-	for i in range(joueur.sorts.size()):
-		var sort   : Resource = joueur.sorts[i]
-		var touche : String   = TOUCHES_SORTS[i] if i < TOUCHES_SORTS.size() else "?"
-		var cout   : String   = "(%dPM%s)" % [sort.cout_pm, ("/%dG" % sort.cout_gold) if sort.cout_gold > 0 else ""]
+	# PM
+	_ajouter_stat(vbox, "🔵 %d / %d PM" % [joueur.pm_actuels, joueur.pm_max],
+		joueur.pm_actuels, joueur.pm_max, COULEUR_PM)
 
-		if sort.est_disponible():
-			txt += "  [color=#00ff88][%s] %s ✅[/color] [color=#888888]%s[/color]\n" % [touche, sort.nom, cout]
-		else:
-			txt += "  [color=#ff4444][%s] %s 🔄%dT[/color] [color=#888888]%s[/color]\n" % [touche, sort.nom, sort.cooldown_actuel, cout]
+	# Gold
+	var label_gold := Label.new()
+	label_gold.text = "💰 %d Gold" % joueur.gold
+	label_gold.add_theme_font_size_override("font_size", FONT_SIZE_STATS)
+	label_gold.add_theme_color_override("font_color", COULEUR_GOLD)
+	vbox.add_child(label_gold)
 
-	return txt
+	# Effets de statut
+	var effets_texte : String = _get_effets(joueur)
+	if effets_texte != "":
+		var label_effets := Label.new()
+		label_effets.text            = effets_texte
+		label_effets.add_theme_font_size_override("font_size", 10)
+		label_effets.add_theme_color_override("font_color", Color(0.8, 0.8, 0.8))
+		label_effets.autowrap_mode   = TextServer.AUTOWRAP_WORD_SMART
+		vbox.add_child(label_effets)
+
+	return card
 
 
 # =======================================================
-# HELPERS — Texte de statut
+# HELPERS — Stat avec ProgressBar
 # =======================================================
 
-# -------------------------------------------------------
-# Barre de progression textuelle — ex: [████████░░░░░░]
-# pct : 0.0 → 1.0
-# -------------------------------------------------------
-func _barre(pct: float, longueur: int) -> String:
-	var rempli : int = int(clamp(pct, 0.0, 1.0) * longueur)
-	return "[" + "█".repeat(rempli) + "░".repeat(longueur - rempli) + "]"
+func _ajouter_stat(parent: VBoxContainer, texte: String, val: int, max_val: int, couleur: Color) -> void:
+	var label := Label.new()
+	label.text = texte
+	label.add_theme_font_size_override("font_size", FONT_SIZE_STATS)
+	label.add_theme_color_override("font_color", couleur)
+	parent.add_child(label)
+
+	var barre := ProgressBar.new()
+	barre.min_value           = 0
+	barre.max_value           = max(1, max_val)
+	barre.value               = val
+	barre.show_percentage     = false
+	barre.custom_minimum_size = Vector2(0, 6)
+
+	var fill := StyleBoxFlat.new()
+	fill.bg_color = couleur
+	barre.add_theme_stylebox_override("fill", fill)
+
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = Color(0.1, 0.1, 0.12, 0.9)
+	barre.add_theme_stylebox_override("background", bg)
+
+	parent.add_child(barre)
 
 
-# -------------------------------------------------------
-# Met à jour le timer de tour chaque frame.
-# Passe au rouge quand il reste moins de 30 secondes.
-# -------------------------------------------------------
-func _process(_delta: float) -> void:
-	if tour_manager == null or _label_timer == null:
-		return
-	var temps_restant : float = tour_manager._timer.time_left
-	var minutes       : int   = int(temps_restant) / 60
-	var secondes      : int   = int(temps_restant) % 60
-	_label_timer.text = "⏱ %d:%02d" % [minutes, secondes]
-	var couleur : Color = Color.RED if temps_restant < 30.0 else Color.WHITE
-	_label_timer.add_theme_color_override("font_color", couleur)
-	
-# -------------------------------------------------------
-# Détermine la classe d'un joueur via son resource_path
-# -------------------------------------------------------
-func _get_nom_classe(joueur: Node) -> String:
+# =======================================================
+# HELPERS — Couleur et texte
+# =======================================================
+
+func _couleur_hp(pct: float) -> Color:
+	if pct < 0.3: return COULEUR_HP_BAS
+	if pct < 0.6: return COULEUR_HP_MOYEN
+	return COULEUR_HP_HAUT
+
+
+func _get_classe(joueur: Node) -> String:
 	var path : String = joueur.get_script().resource_path
 	if "fripon"   in path: return "Fripon"
 	if "mage"     in path: return "Mage"
@@ -223,99 +219,29 @@ func _get_nom_classe(joueur: Node) -> String:
 	return "?"
 
 
-# -------------------------------------------------------
-# Retourne la description colorée de la case actuelle du joueur
-# -------------------------------------------------------
-func _get_texte_case(joueur: Node) -> String:
-	if board == null or not joueur.est_place:
-		return ""
-	match board.get_case(joueur.grid_x, joueur.grid_y):
-		0: return "[color=#aaaaaa]Normal[/color]"
-		1: return "[color=#ff4400]🔥 Lave (-10 HP/tour)[/color]"
-		2: return "[color=#4488ff]💧 Eau (+10 HP/tour)[/color]"
-		3: return "[color=#444444]⬛ Vide[/color]"
-		4: return "[color=#44bb44]🌲 Forêt (+10% résist, 2PM)[/color]"
-		5: return "[color=#886644]🧱 Mur[/color]"
-		6: return "[color=#ccaa00]🏰 Tour (+1 portée sorts)[/color]"
-	return ""
+func _get_effets(joueur: Node) -> String:
+	var parties : Array = []
 
+	if joueur.tours_immobilise > 0:
+		parties.append("❄️ Gel (%dT)" % joueur.tours_immobilise)
 
-# -------------------------------------------------------
-# Retourne la liste BBCode de tous les effets actifs sur un joueur.
-# tous : nécessaire pour détecter si ce joueur est marqué par un Fripon.
-# -------------------------------------------------------
-func _get_effets_actifs(joueur: Node, tous: Array) -> String:
-	var effets : Array = []
-
-	# DoT actifs
 	for source_id in joueur.dots_actifs:
 		var dot : Dictionary = joueur.dots_actifs[source_id]
-		effets.append("[color=#ff8800]  ☠️ DoT '%s' : %d/tour (%dT)[/color]" % [
-			source_id, dot["degats"], dot["tours_restants"]
-		])
+		parties.append("☠️ DoT %d/T (%dT)" % [dot["degats"], dot["tours_restants"]])
 
-	# Immobilisation (Gel, Piège)
-	if joueur.tours_immobilise > 0:
-		effets.append("[color=#00ccff]  ❄️ Gel — immobilisé (%dT)[/color]" % joueur.tours_immobilise)
-
-	# Résistance de case (Forêt)
 	if joueur.resistance_case > 0.0:
-		effets.append("[color=#44bb44]  🛡️ Résistance case : +%.0f%%[/color]" % (joueur.resistance_case * 100))
+		parties.append("🛡️ Case +%.0f%%" % (joueur.resistance_case * 100))
 
-	# Résistance permanente (Amulette, Armure)
 	if joueur.resistance_degats > 0.0:
-		effets.append("[color=#88ff88]  🛡️ Résistance perma : +%.0f%%[/color]" % (joueur.resistance_degats * 100))
+		parties.append("🛡️ +%.0f%% rés." % (joueur.resistance_degats * 100))
 
-	# Rage Berserker (Guerrier)
 	if joueur.get("rage_active") != null and joueur.rage_active:
-		effets.append("[color=#ff4444]  ⚔️ Rage Berserker (%dT)[/color]" % joueur.tours_rage_restants)
+		parties.append("⚔️ Rage (%dT)" % joueur.tours_rage_restants)
 
-	# Frénésie (Fripon)
 	if joueur.get("frenesie_active") != null and joueur.frenesie_active:
-		effets.append("[color=#ffff44]  🔥 Frénésie — attaques à 0 PM ![/color]")
+		parties.append("🔥 Frénésie")
 
-	# Lame Empoisonnée prête (Fripon)
 	if joueur.get("lame_active") != null and joueur.lame_active:
-		effets.append("[color=#cc44ff]  ☠️ Lame Empoisonnée prête[/color]")
+		parties.append("☠️ Lame prête")
 
-	# Ruée — disponible ou en recharge (Fripon)
-	if joueur.get("ruee_disponible") != null:
-		if joueur.ruee_disponible:
-			effets.append("[color=#44ffcc]  🗡️ Ruée disponible[/color]")
-		else:
-			var restantes : int = 3 - joueur.attaques_depuis_ruee
-			effets.append("[color=#888888]  🗡️ Ruée — encore %d attaque(s)[/color]" % restantes)
-
-	# Marque posée (ce joueur a marqué un ennemi — Fripon)
-	if joueur.get("marque_cible") != null:
-		effets.append("[color=#ff88ff]  🎯 Marque posée sur %s (%dT)[/color]" % [
-			joueur.marque_cible.name, joueur.marque_tours_restants
-		])
-
-	# Marqué par un Fripon ennemi
-	for autre in tous:
-		if autre == joueur:
-			continue
-		if autre.get("marque_cible") != null and autre.marque_cible == joueur:
-			effets.append("[color=#ff44ff]  🎯 MARQUÉ par %s (%dT)[/color]" % [
-				autre.name, autre.marque_tours_restants
-			])
-
-	return "\n".join(effets)
-
-
-# =======================================================
-# REPOSITIONNEMENT
-# =======================================================
-
-func _notification(what: int) -> void:
-	if what == NOTIFICATION_WM_SIZE_CHANGED:
-		_repositionner()
-
-
-func _repositionner() -> void:
-	if _panel == null:
-		return
-	var taille : Vector2 = get_viewport().get_visible_rect().size
-	_panel.set_position(Vector2(taille.x - HUD_LARGEUR, 0))
-	_panel.set_size(Vector2(HUD_LARGEUR, taille.y))
+	return "\n".join(parties)

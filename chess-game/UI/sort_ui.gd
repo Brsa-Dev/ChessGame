@@ -39,7 +39,9 @@ const COULEUR_SELECTIONNE : Color = Color(0.35, 0.1,  0.6,  0.95)  # Violet — 
 const COULEUR_COOLDOWN    : Color = Color(0.35, 0.2,  0.05, 0.92)  # Orange sombre — cooldown
 const COULEUR_VEROUILLE   : Color = Color(0.12, 0.12, 0.12, 0.88)  # Gris foncé — verrouillé
 const COULEUR_PM_INSUF    : Color = Color(0.25, 0.05, 0.05, 0.92)  # Rouge foncé — PM insuffisants
-const COULEUR_BORDURE_SEL : Color = Color(0.7,  0.3,  1.0,  1.0)   # Violet vif — bordure sélectionné
+const COULEUR_BORDURE_SEL       : Color = Color(0.7,  0.3,  1.0,  1.0)   # Violet vif — bordure sélectionné
+const COULEUR_BOUTON_FIN_TOUR   : Color = Color(0.15, 0.15, 0.25, 0.92)  # Fond du bouton Fin de Tour
+const COULEUR_TEXTE_FIN_TOUR    : Color = Color(0.9,  0.9,  1.0,  1.0)   # Texte du bouton Fin de Tour
 
 
 # =======================================================
@@ -66,17 +68,43 @@ var _conteneur : HBoxContainer = null
 func _ready() -> void:
 	layer = 10  # Au-dessus du jeu 3D, en-dessous de l'inventaire
 
-	# Crée le conteneur des cards centré horizontalement en bas
+	# Conteneur global : cards + bouton sur la même ligne
+	var hbox_global := HBoxContainer.new()
+	hbox_global.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	hbox_global.anchor_top    = 1.0
+	hbox_global.anchor_bottom = 1.0
+	hbox_global.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	hbox_global.offset_bottom = -CARD_MARGE_BAS
+	hbox_global.offset_top    = -(CARD_HAUTEUR + CARD_MARGE_BAS)
+	hbox_global.alignment     = BoxContainer.ALIGNMENT_CENTER
+	add_child(hbox_global)
+
+	# Cards de sorts — prend toute la place disponible
 	_conteneur = HBoxContainer.new()
 	_conteneur.add_theme_constant_override("separation", CARD_ESPACEMENT)
-	_conteneur.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
-	_conteneur.anchor_top    = 1.0
-	_conteneur.anchor_bottom = 1.0
-	_conteneur.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	_conteneur.offset_bottom = -CARD_MARGE_BAS
-	_conteneur.offset_top    = -(CARD_HAUTEUR + CARD_MARGE_BAS)
-	_conteneur.alignment     = BoxContainer.ALIGNMENT_CENTER
-	add_child(_conteneur)
+	_conteneur.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_conteneur.alignment = BoxContainer.ALIGNMENT_CENTER
+	hbox_global.add_child(_conteneur)
+
+	# Bouton Fin de Tour — à droite des cards
+	var btn := Button.new()
+	btn.text = "Fin de tour ➜"
+	btn.custom_minimum_size = Vector2(140, CARD_HAUTEUR)
+
+	var style_btn := StyleBoxFlat.new()
+	style_btn.bg_color = Color(0.75, 0.10, 0.10)
+	style_btn.set_corner_radius_all(8)
+	btn.add_theme_stylebox_override("normal", style_btn)
+
+	var style_hover := StyleBoxFlat.new()
+	style_hover.bg_color = Color(0.90, 0.15, 0.15)
+	style_hover.set_corner_radius_all(8)
+	btn.add_theme_stylebox_override("hover", style_hover)
+
+	btn.add_theme_color_override("font_color", Color(1.0, 1.0, 1.0))
+	btn.add_theme_font_size_override("font_size", 15)
+	btn.pressed.connect(func(): get_tree().call_group("main", "fin_de_tour"))
+	hbox_global.add_child(btn)
 
 
 # =======================================================

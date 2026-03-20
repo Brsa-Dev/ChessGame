@@ -32,7 +32,6 @@ const DUREE_IMMOBILISATION_AMELIOREE : int = 2  # Tours avec Piège Amélioré
 # Références injectées par main.gd
 # -------------------------------------------------------
 var board         : Node  = null  # Référence à board.gd — types et état des cases
-var log_ui        : Node  = null  # Référence au log — pour afficher les messages
 var joueurs       : Array = []    # Liste de tous les joueurs [joueur1, joueur2, joueur3]
 var renderer      : Node  = null  # Référence au renderer — pour forcer le redraw
 
@@ -180,8 +179,6 @@ func _declencher_piege(joueur: Node, piege: Dictionary) -> void:
 		duree_immobilisation
 	]
 	print(message)
-	if log_ui:
-		log_ui.ajouter(message, log_ui.COULEUR_SYSTEME)
 
 
 # =======================================================

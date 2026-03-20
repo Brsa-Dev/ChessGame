@@ -9,7 +9,8 @@
 [ext_resource type="Script" uid="uid://vx764si80mid" path="res://Classe/archer.gd" id="6_074og"]
 [ext_resource type="Script" uid="uid://gmarcgm6a54i" path="res://Manager/shop_manager.gd" id="6_272bh"]
 [ext_resource type="PackedScene" uid="uid://mbe0rw1qqi34" path="res://UI/shop_ui.tscn" id="7_5vw27"]
-[ext_resource type="PackedScene" uid="uid://dsa25x38tnxyk" path="res://UI/log_ui.tscn" id="8_4c57u"]
+[ext_resource type="PackedScene" uid="uid://4d1ftiaywnot" path="res://UI/tour_ui.tscn" id="8_cegan"]
+[ext_resource type="PackedScene" uid="uid://x2blo4wnwi25" path="res://UI/annonce_ui.tscn" id="9_82xsv"]
 [ext_resource type="Script" uid="uid://btmxatp242gy4" path="res://UI/hud_ui.gd" id="11_efxa6"]
 [ext_resource type="Script" uid="uid://cwnxppdudkabl" path="res://Manager/event_manager.gd" id="12_dg77c"]
 [ext_resource type="Script" uid="uid://davtd4vv1xjqv" path="res://UI/inventory_ui.gd" id="13_ycdy4"]
@@ -46,41 +47,23 @@ one_shot = true
 
 [node name="UI" type="CanvasLayer" parent="." unique_id=457447921]
 
-[node name="BoutonFinTour" type="Button" parent="UI" unique_id=1024449086]
-anchors_preset = 3
-anchor_left = 1.0
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_left = -92.0
-offset_top = -31.0
-grow_horizontal = 0
-grow_vertical = 0
-text = "Fin de tour"
+[node name="TourUI" parent="UI" unique_id=971309424 instance=ExtResource("8_cegan")]
 
-[node name="LogUI" parent="UI" unique_id=155916075 instance=ExtResource("8_4c57u")]
-anchors_preset = 11
-anchor_left = 1.0
-anchor_right = 1.0
-offset_left = -1293.0
-offset_top = -177.0
-offset_right = -1013.0
-offset_bottom = 173.0
-grow_horizontal = 0
+[node name="AnnonceUI" parent="UI" unique_id=1466461553 instance=ExtResource("9_82xsv")]
+
+[node name="ShopUI" parent="UI" unique_id=2008567203 instance=ExtResource("7_5vw27")]
+
+[node name="HudUI" type="CanvasLayer" parent="UI" unique_id=126964788]
+script = ExtResource("11_efxa6")
+
+[node name="InventoryUI" type="CanvasLayer" parent="UI" unique_id=695604500]
+script = ExtResource("13_ycdy4")
 
 [node name="ShopManager" type="Node" parent="." unique_id=1214474715]
 script = ExtResource("6_272bh")
 
-[node name="ShopUI" parent="." unique_id=2008567203 instance=ExtResource("7_5vw27")]
-
-[node name="HudUI" type="CanvasLayer" parent="." unique_id=126964788]
-script = ExtResource("11_efxa6")
-
 [node name="EventManager" type="Node" parent="." unique_id=696540558]
 script = ExtResource("12_dg77c")
-
-[node name="InventoryUI" type="CanvasLayer" parent="." unique_id=695604500]
-script = ExtResource("13_ycdy4")
 
 [node name="Handlers" type="Node" parent="." unique_id=950920928]
 
@@ -109,4 +92,3 @@ shadow_enabled = true
 script = ExtResource("18_074og")
 
 [connection signal="timeout" from="TourManager/Timer" to="TourManager" method="_on_timer_timeout"]
-[connection signal="pressed" from="UI/BoutonFinTour" to="." method="fin_de_tour"]

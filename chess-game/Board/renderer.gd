@@ -64,17 +64,13 @@ const SCENE_CASE_TOUR         : PackedScene = preload("res://Assets/Cases/case_t
 # =======================================================
 # SCÈNES PRÉCHARGÉES — Joueurs
 # -------------------------------------------------------
-# pion_blanc est le corps commun à toutes les classes.
-# Les accessoires distinguent visuellement chaque classe.
+# Chaque classe a son propre .glb complet (pion + accessoires
+# déjà intégrés et positionnés depuis Blender).
 # =======================================================
-const SCENE_PION_BLANC     : PackedScene = preload("res://Assets/Personnages/pion_blanc.glb")
-const SCENE_HACHE          : PackedScene = preload("res://Assets/Personnages/guerrier/hache.glb")
-const SCENE_BOUCLIER       : PackedScene = preload("res://Assets/Personnages/guerrier/bouclier.glb")
-const SCENE_GRIMOIRE       : PackedScene = preload("res://Assets/Personnages/mage/grimoire.glb")
-const SCENE_CHAPEAU_MAGE   : PackedScene = preload("res://Assets/Personnages/mage/chapeau.glb")
-const SCENE_ARC            : PackedScene = preload("res://Assets/Personnages/archer/arc.glb")
-const SCENE_CARQUOIS       : PackedScene = preload("res://Assets/Personnages/archer/carquois.glb")
-const SCENE_KUNAI          : PackedScene = preload("res://Assets/Personnages/fripon/kunai.glb")
+const SCENE_PION_GUERRIER : PackedScene = preload("res://Assets/Personnages/guerrier/pion_guerrier.glb")
+const SCENE_PION_MAGE     : PackedScene = preload("res://Assets/Personnages/mage/pion_mage.glb")
+const SCENE_PION_ARCHER   : PackedScene = preload("res://Assets/Personnages/archer/pion_archer.glb")
+const SCENE_PION_FRIPON   : PackedScene = preload("res://Assets/Personnages/fripon/pion_fripon.glb")
 
 
 # =======================================================
@@ -457,42 +453,31 @@ func _mettre_a_jour_joueurs() -> void:
 # Les accessoires sont positionnés relativement au pion
 # grâce à une position locale (pas mondiale).
 # -------------------------------------------------------
+# -------------------------------------------------------
+# Crée le pion 3D complet pour un joueur selon sa classe.
+# Chaque classe a son propre .glb avec pion + accessoires
+# déjà positionnés correctement depuis Blender.
+# Plus besoin de positionner les accessoires en code.
+# -------------------------------------------------------
 func _creer_pion(joueur: Node) -> Node3D:
-	# Nœud racine qui regroupe pion + accessoires
-	var racine : Node3D = Node3D.new()
+	var scene : PackedScene = _get_scene_pion(joueur)
+	var noeud : Node3D      = scene.instantiate()
+	return noeud
 
-	# Corps du pion (identique pour toutes les classes)
-	var corps : Node3D = SCENE_PION_BLANC.instantiate()
-	racine.add_child(corps)
 
-	# Détecte la classe via le chemin du script (même logique que input_handler)
+# -------------------------------------------------------
+# Retourne la scène du pion selon la classe du joueur.
+# Détection via resource_path (même logique que input_handler).
+# -------------------------------------------------------
+func _get_scene_pion(joueur: Node) -> PackedScene:
 	var chemin : String = joueur.get_script().resource_path.to_lower()
-
-	if "guerrier" in chemin:
-		_ajouter_accessoire(racine, SCENE_HACHE,      Vector3( 0.3, 0.5, 0.0))
-		_ajouter_accessoire(racine, SCENE_BOUCLIER,   Vector3(-0.3, 0.4, 0.0))
-	elif "mage" in chemin:
-		_ajouter_accessoire(racine, SCENE_GRIMOIRE,   Vector3( 0.3, 0.4, 0.0))
-		_ajouter_accessoire(racine, SCENE_CHAPEAU_MAGE, Vector3(0.0, 1.2, 0.0))
-	elif "archer" in chemin:
-		_ajouter_accessoire(racine, SCENE_ARC,        Vector3( 0.3, 0.6, 0.0))
-		_ajouter_accessoire(racine, SCENE_CARQUOIS,   Vector3(-0.3, 0.5, 0.0))
-	elif "fripon" in chemin:
-		_ajouter_accessoire(racine, SCENE_KUNAI,      Vector3( 0.25, 0.3, 0.0))
-
-	return racine
-
-
-# -------------------------------------------------------
-# Instancie un accessoire et le positionne relativement
-# au nœud parent (le pion racine).
-# La position est locale : (0.3, 0.5, 0) = 30cm à droite
-# et 50cm en hauteur par rapport au centre du pion.
-# -------------------------------------------------------
-func _ajouter_accessoire(parent: Node3D, scene: PackedScene, position_locale: Vector3) -> void:
-	var accessoire : Node3D = scene.instantiate()
-	accessoire.position = position_locale
-	parent.add_child(accessoire)
+	if "guerrier" in chemin: return SCENE_PION_GUERRIER
+	if "mage"     in chemin: return SCENE_PION_MAGE
+	if "archer"   in chemin: return SCENE_PION_ARCHER
+	if "fripon"   in chemin: return SCENE_PION_FRIPON
+	# Fallback si classe non reconnue
+	push_warning("renderer._get_scene_pion() — classe inconnue : %s" % chemin)
+	return SCENE_PION_GUERRIER
 
 
 # =======================================================

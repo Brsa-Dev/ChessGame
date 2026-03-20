@@ -1,0 +1,21 @@
+[gd_scene format=3 uid="uid://4d1ftiaywnot"]
+
+[node name="TourUI" type="CanvasLayer" unique_id=971309424]
+
+[node name="PanelContainer" type="PanelContainer" parent="." unique_id=307084292]
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -20.0
+offset_right = 20.0
+offset_bottom = 40.0
+grow_horizontal = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="PanelContainer" unique_id=648594428]
+layout_mode = 2
+
+[node name="ColorRect" type="ColorRect" parent="PanelContainer/HBoxContainer" unique_id=1497236968]
+layout_mode = 2
+
+[node name="LabelJoueur" type="Label" parent="PanelContainer/HBoxContainer" unique_id=1684894451]
+layout_mode = 2

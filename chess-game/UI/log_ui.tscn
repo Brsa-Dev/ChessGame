@@ -2,20 +2,18 @@
 
 [ext_resource type="Script" uid="uid://6erbea1woia6" path="res://UI/log_ui.gd" id="1_orixs"]
 
-[node name="LogUI" type="PanelContainer" unique_id=155916075]
-anchors_preset = 9
-anchor_bottom = 1.0
-offset_right = 108.0
-grow_vertical = 2
+[node name="LogUI" type="CanvasLayer" unique_id=100143272]
 script = ExtResource("1_orixs")
 
-[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1762505548]
+[node name="PanelContainer" type="PanelContainer" parent="." unique_id=751863783]
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer" unique_id=1973775865]
 layout_mode = 2
 
-[node name="Titre" type="Label" parent="VBoxContainer" unique_id=120559792]
+[node name="Historique" type="Label" parent="PanelContainer/VBoxContainer" unique_id=2031106700]
 layout_mode = 2
-text = "📜 Historique"
-horizontal_alignment = 1
 
-[node name="Messages" type="VBoxContainer" parent="VBoxContainer" unique_id=1413889972]
+[node name="Messages" type="VBoxContainer" parent="PanelContainer/VBoxContainer" unique_id=2034969836]
 layout_mode = 2

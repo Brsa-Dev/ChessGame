@@ -69,7 +69,6 @@ const SORTS_INAPPLICABLES_SUR_MINE : Array = [
 # -------------------------------------------------------
 var board           : Node  = null  # board.gd — état du plateau
 var renderer        : Node  = null  # renderer.gd — redraw visuel
-var log_ui          : Node  = null  # log_ui.gd — messages log
 var event_manager   : Node  = null  # event_manager.gd — mines, coffres
 var effects_handler : Node  = null  # effects_handler.gd — effets de case
 var joueurs         : Array = []    # [joueur1, joueur2, joueur3]
@@ -174,7 +173,6 @@ func _sort_guerrier_mur(joueur: Node, sort: Resource, cible_x: int, cible_y: int
 
 	board.plateau[cible_x][cible_y] = board.CaseType.MUR
 	renderer.queue_redraw()
-	_log("🧱 %s crée un Mur en (%d,%d)" % [joueur.name, cible_x, cible_y], joueur)
 	return true
 
 
@@ -189,7 +187,6 @@ func _sort_guerrier_hache(joueur: Node, sort: Resource, cible: Node) -> bool:
 	cible.recevoir_degats(degats)
 	cible.ajouter_dot("hache_empoisonnee", DOT_LAME_DEGATS, DOT_LAME_DUREE)
 	joueur.gagner_gold_sur_degats(degats)
-	_log("🪓 %s — Hache : %d dmg + DoT sur %s" % [joueur.name, degats, cible.name], joueur)
 	return true
 
 
@@ -207,12 +204,10 @@ func _sort_guerrier_bouclier(joueur: Node, sort: Resource, cible: Node) -> bool:
 	effects_handler.appliquer_effet_case(cible)
 
 	renderer.queue_redraw()
-	_log("🛡️ %s — Bouclier : %d dmg + repousse %s" % [joueur.name, degats, cible.name], joueur)
 
 	if bloque_obstacle:
 		cible.recevoir_degats(DEGATS_IMPACT_MUR)
 		joueur.gagner_gold_sur_degats(DEGATS_IMPACT_MUR)
-		_log("💥 Impact obstacle sur %s ! +%d dmg" % [cible.name, DEGATS_IMPACT_MUR], joueur)
 
 	return true
 
@@ -220,7 +215,6 @@ func _sort_guerrier_bouclier(joueur: Node, sort: Resource, cible: Node) -> bool:
 func _sort_guerrier_rage(joueur: Node, sort: Resource) -> bool:
 	_consommer_ressources(joueur, sort)
 	joueur.activer_rage()
-	_log("⚔️ %s — Rage Berserker ! x2 attaque, +2 PM" % joueur.name, joueur)
 	return true
 
 
@@ -235,7 +229,6 @@ func _sort_mage_boule_feu(joueur: Node, sort: Resource, cible: Node) -> bool:
 	var degats : int = sort.degats + joueur.bonus_degats_sorts
 	cible.recevoir_degats(degats)
 	joueur.gagner_gold_sur_degats(degats)
-	_log("🔥 %s — Boule de Feu : %d dmg sur %s" % [joueur.name, degats, cible.name], joueur)
 	return true
 
 
@@ -244,7 +237,6 @@ func _sort_mage_gel(joueur: Node, sort: Resource, cible: Node) -> bool:
 		return false
 	_consommer_ressources(joueur, sort)
 	cible.tours_immobilise = 2
-	_log("❄️ %s — Gel : %s immobilisé 2 tours" % [joueur.name, cible.name], joueur)
 	return true
 
 
@@ -256,7 +248,6 @@ func _sort_mage_meteore(joueur: Node, sort: Resource, cible_x: int, cible_y: int
 		"tours_restants" : 3,       # Explose au 3ème tour du Mage après le lancer
 		"lanceur"        : joueur
 	})
-	_log("☄️ %s — Météore en route ! Impact dans 2 tours" % joueur.name, joueur)
 	return true
 
 
@@ -281,7 +272,6 @@ func _sort_mage_tempete(joueur: Node, sort: Resource) -> bool:
 		j.attaque_portee = max(0, j.attaque_portee - 2)
 		joueur.gagner_gold_sur_degats(degats)
 
-	_log("⚡ %s — Tempête Arcanique sur tous les ennemis !" % joueur.name, joueur)
 	return true
 
 
@@ -300,14 +290,12 @@ func _sort_archer_fleche(joueur: Node, sort: Resource, cible: Node, cible_x: int
 	var degats_principal : int = sort.degats + joueur.bonus_degats_sorts
 	cible.recevoir_degats(degats_principal)
 	joueur.gagner_gold_sur_degats(degats_principal)
-	_log("🏹 %s — Flèche : %d dmg sur %s" % [joueur.name, degats_principal, cible.name], joueur)
 
 	# Rebond sur la cible la plus proche dans un rayon de 2 cases autour de la cible initiale
 	var cible_rebond : Node = _trouver_cible_rebond(joueur, cible)
 	if cible_rebond:
 		cible_rebond.recevoir_degats(DEGATS_REBOND_FLECHE)
 		joueur.gagner_gold_sur_degats(DEGATS_REBOND_FLECHE)
-		_log("↩️ Rebond sur %s : %d dmg" % [cible_rebond.name, DEGATS_REBOND_FLECHE], joueur)
 
 	return true
 
@@ -324,7 +312,6 @@ func _sort_archer_piege(joueur: Node, sort: Resource, cible_x: int, cible_y: int
 	_consommer_ressources(joueur, sort)
 	pieges_actifs.append({ "x": cible_x, "y": cible_y, "poseur": joueur })
 	renderer.queue_redraw()
-	_log("🪤 %s pose un piège en (%d,%d)" % [joueur.name, cible_x, cible_y], joueur)
 	return true
 
 
@@ -352,8 +339,6 @@ func _sort_archer_tir_cible(joueur: Node, sort: Resource, cible: Node, cible_x: 
 	cible.recevoir_degats(degats_finaux)
 	joueur.gagner_gold_sur_degats(degats_finaux)
 
-	var suffix : String = " (forêt ! -5 Gold)" if est_en_foret else ""
-	_log("🎯 %s — Tir Ciblé : %d dmg sur %s%s" % [joueur.name, degats_finaux, cible.name, suffix], joueur)
 	return true
 
 
@@ -380,7 +365,6 @@ func _sort_archer_pluie_fleches(joueur: Node, sort: Resource, cible_x: int, cibl
 	})
 
 	renderer.queue_redraw()
-	_log("🌲 %s — Pluie de Flèches ! Zone forêt créée" % joueur.name, joueur)
 	return true
 
 
@@ -430,7 +414,6 @@ func _sort_fripon_ruee(joueur: Node, sort: Resource, cible: Node, cible_x: int, 
 
 	effects_handler.appliquer_effet_case(joueur)
 	renderer.queue_redraw()
-	_log("🗡️ %s — Ruée vers (%d,%d)" % [joueur.name, case_arrivee.x, case_arrivee.y], joueur)
 	return true
 
 
@@ -450,7 +433,6 @@ func _sort_fripon_derobade(joueur: Node, sort: Resource, cible: Node) -> bool:
 	sort.declencher_cooldown()
 	joueur.marque_cible          = cible
 	joueur.marque_tours_restants = 3
-	_log("🎯 %s marque %s — expire dans 3 tours" % [joueur.name, cible.name], joueur)
 	return true
 
 
@@ -459,7 +441,6 @@ func _sort_fripon_lame(joueur: Node, sort: Resource) -> bool:
 	joueur.pm_actuels -= sort.cout_pm
 	sort.declencher_cooldown()
 	joueur.lame_active = true
-	_log("☠️ %s — Lame Empoisonnée activée" % joueur.name, joueur)
 	return true
 
 
@@ -474,7 +455,6 @@ func _sort_fripon_frenesie(joueur: Node, sort: Resource) -> bool:
 	joueur.pm_actuels -= sort.cout_pm
 	sort.declencher_cooldown()
 	joueur.frenesie_active = true
-	_log("🔥 %s — Frénésie ! Attaques à 0 PM ce tour" % joueur.name, joueur)
 	return true
 
 
@@ -508,7 +488,6 @@ func _utiliser_sort_sur_mine(joueur: Node, sort: Resource, cible_x: int, cible_y
 	sort.declencher_cooldown()
 	joueur.gagner_gold_sur_degats(degats)
 	event_manager.attaquer_mine(cible_x, cible_y, degats, joueur)
-	_log("⛏️ %s — %s : %d dmg sur une Mine" % [joueur.name, sort.nom, degats], joueur)
 	renderer.queue_redraw()
 	return true
 
@@ -527,7 +506,6 @@ func exploser_meteore(meteore: Dictionary) -> void:
 	var cy      : int  = meteore["cible_y"]
 	var lanceur : Node = meteore["lanceur"]
 	print("☄️ IMPACT du Météore en (%d,%d) !" % [cx, cy])
-	_log("☄️ %s — Météore : impact en (%d,%d) !" % [lanceur.name, cx, cy], lanceur)
 
 	var cases_transformees : Array = []
 
@@ -572,7 +550,6 @@ func exploser_marque_derobade(fripon: Node) -> void:
 	var degats_base : int = DEGATS_DEROBADE_BASE + fripon.bonus_degats_sorts
 	cible.recevoir_degats(degats_base)
 	fripon.gagner_gold_sur_degats(degats_base)
-	_log("💥 %s — Dérobade ! %d dmg sur %s" % [fripon.name, degats_base, cible.name], fripon)
 
 	# Synergie Lame Empoisonnée
 	if fripon.lame_active:
@@ -581,7 +558,6 @@ func exploser_marque_derobade(fripon: Node) -> void:
 		# ID unique pour permettre le cumul / refresh du DoT
 		cible.ajouter_dot("lame_derobade_%d" % Time.get_ticks_msec(), DOT_LAME_DEGATS, DOT_LAME_DUREE)
 		fripon.lame_active = false
-		_log("☠️ Lame + Dérobade — +%d dmg + DoT rafraîchi !" % DEGATS_LAME_DEROBADE, fripon)
 
 	# Synergie Ruée — l'explosion compte comme une attaque
 	fripon.attaques_depuis_ruee += 1
@@ -743,19 +719,3 @@ func _get_joueur_en(x: int, y: int) -> Node:
 		if est_actif and joueur.grid_x == x and joueur.grid_y == y:
 			return joueur
 	return null
-
-
-# -------------------------------------------------------
-# Raccourci log — délègue à log_ui
-# -------------------------------------------------------
-func _log(message: String, joueur: Node = null) -> void:
-	if not log_ui:
-		return
-	# Détermine la couleur selon l'index du joueur dans la liste
-	var couleur : Color = log_ui.COULEUR_SYSTEME
-	var index   : int   = joueurs.find(joueur)
-	match index:
-		0: couleur = log_ui.COULEUR_J1
-		1: couleur = log_ui.COULEUR_J2
-		2: couleur = log_ui.COULEUR_J3
-	log_ui.ajouter(message, couleur)
