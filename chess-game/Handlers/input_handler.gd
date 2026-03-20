@@ -524,8 +524,8 @@ func _get_index_sort_depuis_touche(event: InputEventKey) -> int:
 func _reset_selection() -> void:
 	joueur_selectionne          = false
 	sort_selectionne            = -1
-	renderer.joueur_selectionne = false
-	renderer.sort_selectionne   = -1
+	renderer.joueur_selectionne = joueur_selectionne
+	renderer.sort_selectionne   = sort_selectionne
 
 
 # -------------------------------------------------------

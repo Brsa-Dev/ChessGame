@@ -430,13 +430,13 @@ func _mettre_a_jour_surbrillances() -> void:
 	if not joueur_selectionne or joueur_actif == null:
 		return
 
-	# Surbrillances de déplacement (jaune) et d'attaque (rouge)
-	_afficher_surbrillance_deplacement()
-	_afficher_surbrillance_attaque()
-
-	# Surbrillance de sort (violet) — seulement si un sort est sélectionné
+	# Si un sort est sélectionné → UNIQUEMENT le violet, pas le jaune/rouge
 	if sort_selectionne >= 0 and sort_selectionne < joueur_actif.sorts.size():
 		_afficher_surbrillance_sort()
+	else:
+		# Pas de sort sélectionné → déplacement jaune + attaque rouge
+		_afficher_surbrillance_deplacement()
+		_afficher_surbrillance_attaque()
 
 
 # -------------------------------------------------------
