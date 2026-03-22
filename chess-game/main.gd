@@ -91,7 +91,7 @@ var murs_temporaires    : Array[Dictionary] = []
 func _ready() -> void:
 	add_to_group("main")
 	## Attend que le lobby confirme les joueurs avant d'initialiser le jeu
-	$UI/LobbyUI.partie_lancee.connect(_on_partie_lancee)
+	$LobbyUI.partie_lancee.connect(_on_partie_lancee)
 
 
 ## =======================================================
@@ -103,13 +103,20 @@ func _ready() -> void:
 func _on_partie_lancee(configs: Array) -> void:
 	print("=== PARTIE LANCÉE — %d joueurs ===" % configs.size())
 	_joueurs = _creer_joueurs(configs)
+	print("[MAIN] Joueurs créés :")
+	for j in _joueurs:
+		print("  - %s peer_id=%d equipe=%d" % [j.name, j.peer_id, j.equipe])
 	_demarrer_systemes()
 
-	## Host uniquement : synchronise le plateau généré avec tous les Clients
+	## Host uniquement : synchronise le plateau et l'état initial
 	if NetworkManager.est_connecte() and NetworkManager.est_host():
 		var etat : Array = board.exporter_etat()
 		NetworkManager.rpc_sync_plateau.rpc(etat)
 		print("main : plateau broadcasté — %d cases" % etat.size())
+		## Synchronise le joueur actif tiré au sort par tour_manager.initialiser().
+		## Sans ça, chaque instance tire indépendamment → indices différents
+		## → le Host rejette tous les inputs du Client.
+		_broadcaster_etat()
 
 
 ## Démarre tous les systèmes avec _joueurs peuplé.
@@ -208,6 +215,7 @@ func _injecter_references_handlers() -> void:
 	sort_handler.murs_temporaires    = murs_temporaires
 
 	# --- Input Handler ---
+	input_handler.main_node         = self
 	input_handler.board             = board
 	input_handler.renderer          = renderer
 	input_handler.tour_manager      = tour_manager
@@ -267,6 +275,80 @@ func _connecter_signaux() -> void:
 
 
 # =======================================================
+# RÉSEAU — Synchronisation des actions
+# =======================================================
+
+## Reçu par le Host depuis un Client.
+## Vérifie que c'est bien le tour de ce peer, exécute l'action,
+## puis broadcast l'état complet à tous.
+##
+## @param clic_x, clic_y : coordonnées de la case cliquée
+##        Valeur spéciale : -1,-1 = Fin de Tour
+@rpc("any_peer", "reliable")
+func rpc_recevoir_input(clic_x: int, clic_y: int) -> void:
+	if not NetworkManager.est_host():
+		return
+
+	var sender_id    : int  = multiplayer.get_remote_sender_id()
+	var joueur_actif : Node = tour_manager.get_joueur_actif()
+
+	print("[HOST] rpc_recevoir_input reçu — sender=%d clic=(%d,%d) hors_plateau=%s" % [
+		sender_id, clic_x, clic_y,
+		str(clic_x < 0 or clic_y < 0 or clic_x >= 8 or clic_y >= 8)
+	])
+	print("[HOST] joueur_actif.name=%s peer_id=%d" % [
+		joueur_actif.name, joueur_actif.peer_id
+	])
+	print("[HOST] match=%s" % str(joueur_actif.peer_id == sender_id))
+
+	if joueur_actif.peer_id != sender_id:
+		push_warning("[HOST] Input rejeté — pas le tour du peer %d" % sender_id)
+		return
+
+	if clic_x == -1 and clic_y == -1:
+		fin_de_tour()
+	else:
+		input_handler.traiter_clic_reseau(clic_x, clic_y)
+		_broadcaster_etat()
+
+
+## Sérialise l'état complet du jeu et le broadcast à tous les peers.
+## Appelée par le Host après chaque action validée.
+## NE doit être appelée QUE côté Host.
+func _broadcaster_etat() -> void:
+	if not NetworkManager.est_host():
+		push_error("_broadcaster_etat appelée côté Client — bug d'architecture")
+		return
+	print("[HOST] _broadcaster_etat appelée")
+	var etat : Dictionary = GameState.serialiser(_joueurs, board, tour_manager)
+	rpc_appliquer_etat.rpc(etat)      ## Broadcast aux Clients
+	rpc_appliquer_etat(etat)          ## Exécution locale (.rpc() n'appelle pas le caller)
+
+
+## Reçu par tous les peers (sauf Host qui l'appelle directement).
+## Applique l'état reçu et rafraîchit l'affichage.
+##
+## @param etat : Dictionary sérialisé par GameState.serialiser()
+@rpc("authority", "reliable")
+func rpc_appliquer_etat(etat: Dictionary) -> void:
+	print("[SYNC] rpc_appliquer_etat reçu sur peer=%d" % multiplayer.get_unique_id())
+	GameState.deserialiser(etat, _joueurs, board, tour_manager)
+
+	var index_actif : int = etat.get("tour_actif", 0)
+	if index_actif >= 0 and index_actif < _joueurs.size():
+		var ja : Node = _joueurs[index_actif]
+		renderer.joueur_actif = ja
+		if sort_ui != null:
+			sort_ui.joueur_actif = ja
+			sort_ui.rafraichir()
+		if hud_ui != null:
+			hud_ui.rafraichir(_joueurs, ja)
+
+	print("[SYNC] renderer.rafraichir() appelé")
+	renderer.rafraichir()
+
+
+# =======================================================
 # API PUBLIQUE
 # =======================================================
 
@@ -276,6 +358,15 @@ func _connecter_signaux() -> void:
 # résout les effets temporaires, puis passe la main.
 # -------------------------------------------------------
 func fin_de_tour() -> void:
+	## Guard réseau côté Client :
+	## Si c'est notre tour, envoie la fin de tour au Host et return.
+	## Le Host exécutera fin_de_tour() lui-même et broadcastera.
+	if NetworkManager.est_connecte() and not NetworkManager.est_host():
+		var joueur_actif_check : Node = tour_manager.get_joueur_actif()
+		if joueur_actif_check.peer_id == NetworkManager.get_mon_id():
+			rpc_recevoir_input.rpc_id(1, -1, -1)
+		return
+
 	input_handler._reset_selection()
 	renderer.sort_selectionne = -1
 
@@ -331,6 +422,10 @@ func fin_de_tour() -> void:
 	renderer.joueur_selectionne = false
 	renderer.rafraichir()
 	_rafraichir_hud()
+
+	## Broadcast après toute la logique (Host réseau uniquement)
+	if NetworkManager.est_connecte() and NetworkManager.est_host():
+		_broadcaster_etat()
 
 
 # =======================================================

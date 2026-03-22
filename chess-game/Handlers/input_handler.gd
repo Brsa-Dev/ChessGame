@@ -68,6 +68,10 @@ var sort_handler    : Node = null  # sort_handler.gd
 var effects_handler : Node = null  # effects_handler.gd
 var sort_ui         : Node = null  # sort_ui.gd
 
+## Référence vers main.gd — injectée dans _injecter_references_handlers().
+## Nécessaire pour envoyer les clics au Host via RPC en réseau.
+var main_node : Node = null
+
 
 # =======================================================
 # ÉTAT — Listes partagées avec main.gd
@@ -215,6 +219,27 @@ func _traiter_input_clavier(event: InputEventKey) -> void:
 # TRAITEMENT CLIC SOURIS
 # =======================================================
 func _traiter_clic_souris(event: InputEventMouseButton) -> void:
+	## =======================================================
+	## GUARD RÉSEAU — Intercept côté Client
+	## -------------------------------------------------------
+	## Si réseau actif ET ce n'est pas le Host local :
+	##   - Bloque silencieusement si ce n'est pas notre tour
+	##   - Sinon calcule les coords et envoie au Host via RPC
+	## Host et mode solo passent directement au code existant.
+	## =======================================================
+	if NetworkManager.est_connecte() and not NetworkManager.est_host():
+		var joueur_actif_reseau : Node = tour_manager.get_joueur_actif()
+		if joueur_actif_reseau.peer_id != NetworkManager.get_mon_id():
+			return
+		var cell_reseau : Vector2i = renderer.screen_to_grid(event.position)
+		if renderer.camera == null or _est_hors_plateau(cell_reseau):
+			return
+		## Envoie au Host pour validation autoritaire
+		main_node.rpc_recevoir_input.rpc_id(1, cell_reseau.x, cell_reseau.y)
+		## Prédiction locale : pas de return — le Client exécute aussi
+		## localement pour un retour visuel immédiat. Si le Host corrige,
+		## rpc_appliquer_etat() écrasera l'état.
+
 	var cell         : Vector2i = renderer.screen_to_grid(event.position)
 	var joueur_actif : Node     = tour_manager.get_joueur_actif()
 
@@ -248,6 +273,55 @@ func _traiter_clic_souris(event: InputEventMouseButton) -> void:
 
 	# Reclique sur soi-même → désélection
 	var est_sur_soi : bool = cell.x == joueur_actif.grid_x and cell.y == joueur_actif.grid_y
+	if joueur_selectionne and est_sur_soi:
+		_reset_selection()
+		renderer.joueur_selectionne = false
+		renderer.rafraichir()
+		return
+
+	if not joueur_selectionne:
+		_selectionner_joueur(joueur_actif, cell)
+		return
+
+	_traiter_deplacement_ou_attaque(joueur_actif, cell)
+
+
+## =======================================================
+## API RÉSEAU — Traite un clic reçu depuis le réseau
+## -------------------------------------------------------
+## Appelée par main.gd (Host) quand un input Client arrive.
+## Réplique exactement le comportement d'un clic local
+## sans recréer un InputEventMouseButton (non sérialisable).
+##
+## @param x, y : coordonnées de la case cliquée sur le plateau
+## =======================================================
+func traiter_clic_reseau(x: int, y: int) -> void:
+	var cell         : Vector2i = Vector2i(x, y)
+	var joueur_actif : Node     = tour_manager.get_joueur_actif()
+
+	if _est_hors_plateau(cell):
+		return
+
+	if bombe_en_attente != null:
+		_appliquer_bombe(cell, joueur_actif)
+		return
+
+	if cape_en_attente != null:
+		_appliquer_cape_foret(cell, joueur_actif)
+		return
+
+	if not joueur_actif.est_place:
+		_placer_joueur(joueur_actif, cell)
+		return
+
+	if sort_selectionne >= 0:
+		_utiliser_sort_sur_clic(joueur_actif, cell)
+		return
+
+	var est_sur_soi : bool = (
+		cell.x == joueur_actif.grid_x and
+		cell.y == joueur_actif.grid_y
+	)
 	if joueur_selectionne and est_sur_soi:
 		_reset_selection()
 		renderer.joueur_selectionne = false

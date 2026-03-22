@@ -65,7 +65,7 @@ script = ExtResource("18_074og")
 
 [node name="LogUI" parent="UI" unique_id=100143272 instance=ExtResource("8_4c57u")]
 
-[node name="LobbyUI" type="CanvasLayer" parent="UI" unique_id=1637947529]
+[node name="LobbyUI" type="CanvasLayer" parent="." unique_id=1637947529]
 script = ExtResource("20_0odxb")
 
 [node name="ShopManager" type="Node" parent="." unique_id=1214474715]

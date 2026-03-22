@@ -356,9 +356,13 @@ func _verifier_tous_prets() -> void:
 		var c : Dictionary = choix_joueurs[id].duplicate()
 		c["peer_id"] = id
 		configs.append(c)
+		print("[NM] config : peer_id=%d classe=%s equipe=%d" % [
+			id, c.get("classe", "?"), c.get("equipe", -1)
+		])
 
 	print("NetworkManager : tous prêts → lancement !")
-	rpc_lancer_partie.rpc(configs)
+	rpc_lancer_partie.rpc(configs)  ## Broadcast aux Clients
+	rpc_lancer_partie(configs)      ## Exécution locale sur le Host (.rpc() n'appelle pas le caller)
 
 
 ## Désigne aléatoirement 1 Roi par équipe, uniquement en 3v3.

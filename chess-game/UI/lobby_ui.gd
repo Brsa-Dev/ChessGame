@@ -87,6 +87,7 @@ var _btn_lancer      : Button
 # =======================================================
 
 func _ready() -> void:
+	layer = 100  # Au-dessus de tous les autres CanvasLayers du jeu
 	_construire_fond()
 	_construire_panel_connexion()
 	_construire_panel_selection()
