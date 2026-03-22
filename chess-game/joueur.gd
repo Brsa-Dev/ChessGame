@@ -48,6 +48,26 @@ var est_mort  : bool = false  # True quand HP tombent à 0
 
 
 # =======================================================
+# RÉSEAU — Identité multijoueur
+# =======================================================
+
+## Identifiant du peer Godot qui contrôle ce joueur.
+## 0 = non assigné (mode test sans réseau).
+## Assigné par main.gd lors de l'instanciation en réseau.
+var peer_id : int = 0
+
+## Équipe du joueur.
+## 0 = Équipe Rouge, 1 = Équipe Bleue.
+## Utilisé pour la condition de victoire et l'affichage.
+var equipe : int = 0
+
+## Indique si ce joueur est le Roi de son équipe.
+## Actif uniquement en 3v3 — désigné aléatoirement au lancement.
+## Si le Roi meurt → défaite immédiate de l'équipe.
+var est_roi : bool = false
+
+
+# =======================================================
 # STATS — Points de vie
 # =======================================================
 

@@ -3,10 +3,7 @@
 [ext_resource type="Script" uid="uid://bogw5eycnqb0q" path="res://main.gd" id="1_ig7tw"]
 [ext_resource type="Script" uid="uid://cx5ap1rwg6fkk" path="res://Board/board.gd" id="2_0xm2m"]
 [ext_resource type="Script" uid="uid://d1c4gj8rey8gb" path="res://Board/renderer.gd" id="3_h2yge"]
-[ext_resource type="Script" uid="uid://dd545mykmfl8k" path="res://Classe/mage.gd" id="4_vivmo"]
-[ext_resource type="Script" uid="uid://c1mg3hyujhvxw" path="res://Classe/guerrier.gd" id="4_yaehf"]
 [ext_resource type="Script" uid="uid://dwdhc37i2tort" path="res://Manager/tour_manager.gd" id="5_lquwl"]
-[ext_resource type="Script" uid="uid://vx764si80mid" path="res://Classe/archer.gd" id="6_074og"]
 [ext_resource type="Script" uid="uid://gmarcgm6a54i" path="res://Manager/shop_manager.gd" id="6_272bh"]
 [ext_resource type="PackedScene" uid="uid://mbe0rw1qqi34" path="res://UI/shop_ui.tscn" id="7_5vw27"]
 [ext_resource type="PackedScene" uid="uid://dsa25x38tnxyk" path="res://UI/log_ui.tscn" id="8_4c57u"]
@@ -24,6 +21,7 @@
 [ext_resource type="Script" uid="uid://c4xb0g6tfc8lk" path="res://UI/timer_ui.gd" id="16_lswn8"]
 [ext_resource type="PackedScene" uid="uid://b8rphx2pexhby" path="res://UI/game_over_ui.tscn" id="17_yaehf"]
 [ext_resource type="Script" uid="uid://c5dfibr5opc76" path="res://UI/sort_ui.gd" id="18_074og"]
+[ext_resource type="Script" uid="uid://4vijrivik54" path="res://UI/lobby_ui.gd" id="20_0odxb"]
 
 [node name="Main" type="Node2D" unique_id=572728295]
 script = ExtResource("1_ig7tw")
@@ -33,15 +31,6 @@ script = ExtResource("2_0xm2m")
 
 [node name="Renderer" type="Node3D" parent="." unique_id=1907460865]
 script = ExtResource("3_h2yge")
-
-[node name="Joueur1" type="Node" parent="." unique_id=754179848]
-script = ExtResource("4_yaehf")
-
-[node name="Joueur2" type="Node" parent="." unique_id=1933811520]
-script = ExtResource("4_vivmo")
-
-[node name="Joueur3" type="Node" parent="." unique_id=964493188]
-script = ExtResource("6_074og")
 
 [node name="TourManager" type="Node" parent="." unique_id=313856146]
 script = ExtResource("5_lquwl")
@@ -75,6 +64,9 @@ script = ExtResource("18_074og")
 [node name="GameOverUi" parent="UI" unique_id=977531849 instance=ExtResource("17_yaehf")]
 
 [node name="LogUI" parent="UI" unique_id=100143272 instance=ExtResource("8_4c57u")]
+
+[node name="LobbyUI" type="CanvasLayer" parent="UI" unique_id=1637947529]
+script = ExtResource("20_0odxb")
 
 [node name="ShopManager" type="Node" parent="." unique_id=1214474715]
 script = ExtResource("6_272bh")

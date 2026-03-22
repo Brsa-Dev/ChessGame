@@ -133,6 +133,36 @@ func get_case(x: int, y: int) -> CaseType:
 	return plateau[x][y]
 
 
+# -------------------------------------------------------
+# Exporte l'état complet du plateau en Array[int].
+# Format : index = x + y * TAILLE_PLATEAU, valeur = CaseType (int).
+# Utilisé par le Host pour broadcaster le plateau aux Clients.
+# -------------------------------------------------------
+func exporter_etat() -> Array:
+	var etat : Array = []
+	for y in range(TAILLE_PLATEAU):
+		for x in range(TAILLE_PLATEAU):
+			etat.append(int(plateau[x][y]))
+	return etat
+
+
+# -------------------------------------------------------
+# Reconstruit le plateau depuis un état exporté.
+# Appelée par le Client après réception du plateau du Host.
+# @param etat : Array de 64 ints (CaseType) dans l'ordre x + y * 8
+# -------------------------------------------------------
+func importer_etat(etat: Array) -> void:
+	if etat.size() != TAILLE_PLATEAU * TAILLE_PLATEAU:
+		push_error("board.importer_etat : taille invalide %d (attendu %d)"
+			% [etat.size(), TAILLE_PLATEAU * TAILLE_PLATEAU])
+		return
+	var i : int = 0
+	for y in range(TAILLE_PLATEAU):
+		for x in range(TAILLE_PLATEAU):
+			plateau[x][y] = etat[i]
+			i += 1
+
+
 # =======================================================
 # CASES OCCUPÉES
 # -------------------------------------------------------

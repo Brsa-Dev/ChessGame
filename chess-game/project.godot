@@ -14,6 +14,10 @@ config/name="ChessGame"
 run/main_scene="uid://l41k4m2kd4oq"
 config/features=PackedStringArray("4.6", "Forward Plus")
 
+[autoload]
+
+NetworkManager="*uid://baav70hrxhvbi"
+
 [input]
 
 click={

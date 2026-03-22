@@ -22,6 +22,19 @@ const MAX_SORTS_DEBLOQUES    : int = 4  # Nombre maximum de sorts débloqués pa
 const INTERVAL_DEBLOCAGE_SORT: int = 2  # Tours globaux entre chaque déblocage de sort
 const TEMPETE_MALUS_PM       : int = 1  # PM retirés au prochain tour lors d'une Tempête
 
+## =======================================================
+## CONSTANTES — Scripts des classes joueurs
+## -------------------------------------------------------
+## Centralisés ici pour éviter les chemins en dur partout.
+## Ajouter une classe = 1 entrée dans ce dictionnaire.
+## =======================================================
+const SCRIPTS_CLASSES : Dictionary = {
+	"Guerrier" : "res://Classe/guerrier.gd",
+	"Mage"     : "res://Classe/mage.gd",
+	"Archer"   : "res://Classe/archer.gd",
+	"Fripon"   : "res://Classe/fripon.gd",
+}
+
 
 # =======================================================
 # RÉFÉRENCES — Nœuds de la scène
@@ -29,9 +42,6 @@ const TEMPETE_MALUS_PM       : int = 1  # PM retirés au prochain tour lors d'un
 
 @onready var board           : Node      = $Board
 @onready var renderer        : Node      = $Renderer
-@onready var joueur1         : Node      = $Joueur1
-@onready var joueur2         : Node      = $Joueur2
-@onready var joueur3         : Node      = $Joueur3
 @onready var tour_manager    : Node      = $TourManager
 @onready var shop_manager    : Node      = $ShopManager
 @onready var shop_ui         : Node      = $UI/ShopUI
@@ -80,19 +90,86 @@ var murs_temporaires    : Array[Dictionary] = []
 
 func _ready() -> void:
 	add_to_group("main")
-	_joueurs = [joueur1, joueur2, joueur3]
+	## Attend que le lobby confirme les joueurs avant d'initialiser le jeu
+	$UI/LobbyUI.partie_lancee.connect(_on_partie_lancee)
 
+
+## =======================================================
+## PARTIE — Lancement depuis le lobby
+## -------------------------------------------------------
+## Appelée par LobbyUI quand tous les joueurs ont confirmé.
+## @param configs : Array de Dictionary {peer_id, classe, equipe, est_roi}
+## =======================================================
+func _on_partie_lancee(configs: Array) -> void:
+	print("=== PARTIE LANCÉE — %d joueurs ===" % configs.size())
+	_joueurs = _creer_joueurs(configs)
+	_demarrer_systemes()
+
+	## Host uniquement : synchronise le plateau généré avec tous les Clients
+	if NetworkManager.est_connecte() and NetworkManager.est_host():
+		var etat : Array = board.exporter_etat()
+		NetworkManager.rpc_sync_plateau.rpc(etat)
+		print("main : plateau broadcasté — %d cases" % etat.size())
+
+
+## Démarre tous les systèmes avec _joueurs peuplé.
+## Factorisé ici pour être appelé depuis _on_partie_lancee()
+## et éventuellement depuis un handler réseau en Phase 3.
+func _demarrer_systemes() -> void:
 	_initialiser_systemes()
 	_injecter_references_handlers()
 	_connecter_signaux()
 
-	hud_ui.rafraichir(_joueurs, tour_manager.get_joueur_actif())
+	if not _joueurs.is_empty():
+		hud_ui.rafraichir(_joueurs, tour_manager.get_joueur_actif())
 	renderer.rafraichir()
 	if sort_ui != null:
 		sort_ui.rafraichir()
 
 	$Camera3D.position = Vector3(10.0, 10.0, 10.0)
 	$Camera3D.look_at(Vector3(0.0, 0.0, 0.0), Vector3.UP)
+
+
+## =======================================================
+## INSTANCIATION — Crée les joueurs depuis une liste de configs
+## -------------------------------------------------------
+## @param configs : Array de Dictionary { classe, peer_id, equipe }
+## @return Array[Node] des joueurs instanciés et ajoutés à la scène
+##
+## Scalable : fonctionne pour 2, 4 ou 6 joueurs.
+## La liste configs vient du lobby en Phase 2.
+## =======================================================
+func _creer_joueurs(configs: Array) -> Array[Node]:
+	var liste : Array[Node] = []
+
+	for i in range(configs.size()):
+		var config : Dictionary = configs[i]
+		var classe : String     = config.get("classe", "Guerrier")
+
+		# Vérifie que la classe demandée est connue
+		if not SCRIPTS_CLASSES.has(classe):
+			push_error("main._creer_joueurs : classe inconnue '%s'" % classe)
+			continue
+
+		# Crée un Node de base et lui assigne le script de la classe
+		var joueur : Node = Node.new()
+		joueur.name       = "Joueur%d" % (i + 1)
+		joueur.set_script(load(SCRIPTS_CLASSES[classe]))
+
+		# Ajoute à la scène AVANT d'assigner les propriétés
+		# (nécessaire pour que _ready() s'exécute correctement)
+		add_child(joueur)
+
+		# Assigne les propriétés réseau après _ready()
+		joueur.peer_id  = config.get("peer_id",  0)
+		joueur.equipe   = config.get("equipe",   0)
+		joueur.est_roi  = config.get("est_roi",  false)
+
+		liste.append(joueur)
+		print("main._creer_joueurs : %s instancié (peer=%d equipe=%d)"
+			% [classe, joueur.peer_id, joueur.equipe])
+
+	return liste
 
 
 func _initialiser_systemes() -> void:
@@ -296,7 +373,7 @@ func _on_phase_boutique(_numero_tour: int) -> void:
 	_index_joueur_boutique         = 0
 	input_handler.boutique_ouverte = true
 	shop_manager.ouvrir_boutique()
-	shop_ui.ouvrir(joueur1)
+	shop_ui.ouvrir(_joueurs[0])
 	if sort_ui != null:
 		sort_ui.set_fin_tour_actif(false)
 

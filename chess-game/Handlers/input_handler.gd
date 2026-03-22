@@ -103,8 +103,13 @@ var on_log            : Callable  # func(message, joueur)
 # =======================================================
 func _input(event: InputEvent) -> void:
 
+	## Guard global — bloque tous les inputs si les systèmes
+	## ne sont pas encore initialisés (pendant le lobby).
+	if board == null or tour_manager == null:
+		return
+
 	# Bloque tous les inputs de jeu quand l'inventaire est ouvert
-	if inventory_ui._visible:
+	if inventory_ui != null and inventory_ui._visible:
 		if event is InputEventKey and event.pressed:
 			if event.keycode == TOUCHE_INVENTAIRE:
 				inventory_ui.toggle(tour_manager.get_joueur_actif())
